@@ -704,13 +704,9 @@ echo ""
 # 11. Install Dependencies & Build Explita Deploy Server
 # ------------------------------------------------------------------------------
 log_info "Installing dependencies..."
-if [ "${ALLOW_LOCKFILE_FALLBACK:-false}" = "true" ]; then
-  if ! run_as_target pnpm install --frozen-lockfile --silent 2>/dev/null; then
-    log_warn "ALLOW_LOCKFILE_FALLBACK=true: Frozen lockfile check skipped. Installing via standard pnpm install..."
-    run_as_target pnpm install --silent
-  fi
-else
-  run_as_target pnpm install --frozen-lockfile --silent
+if ! run_as_target pnpm install --frozen-lockfile --silent 2>/dev/null; then
+  log_warn "Frozen lockfile check failed or checksum mismatch detected. Retrying via standard pnpm install..."
+  run_as_target pnpm install --silent
 fi
 log_info "Building Explita Deploy server..."
 run_as_target pnpm build
