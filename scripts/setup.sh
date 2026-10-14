@@ -425,7 +425,7 @@ mkdir -p /var/lib/explita/postgres \
 if [ "$TARGET_USER" != "root" ] && id "$TARGET_USER" &>/dev/null; then
   chown -R "$TARGET_USER:$TARGET_GROUP" \
     /var/lib/explita/deployments \
-    /var/lib/explita/caddy/apps \
+    /var/lib/explita/caddy \
     /var/lib/explita/backups \
     /var/lib/explita/custom
 fi
