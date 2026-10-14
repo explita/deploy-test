@@ -269,13 +269,17 @@ MIN_NODE_MAJOR=20
 INSTALL_NODE_MAJOR=22
 NODE_NEEDS_INSTALL=true
 
-if command -v node &>/dev/null; then
+if command -v node &>/dev/null && command -v npm &>/dev/null; then
   INSTALLED_NODE_MAJOR=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || node -v | cut -d'.' -f1 | sed 's/v//')
   if [ "$INSTALLED_NODE_MAJOR" -ge "$MIN_NODE_MAJOR" ]; then
     NODE_NEEDS_INSTALL=false
-    log_info "Node.js $(node -v) is already installed (satisfies minimum v${MIN_NODE_MAJOR}+ policy)."
+    log_info "Node.js $(node -v) and npm v$(npm -v 2>/dev/null || echo '') are already installed (satisfies minimum v${MIN_NODE_MAJOR}+ policy)."
   else
     log_warn "Installed Node.js ($(node -v)) is outdated (v${MIN_NODE_MAJOR}+ required). Upgrading to Node.js ${INSTALL_NODE_MAJOR} LTS..."
+  fi
+else
+  if command -v node &>/dev/null; then
+    log_warn "Node.js $(node -v) is installed, but 'npm' is missing. Reinstalling Node.js distribution packages..."
   fi
 fi
 
@@ -317,7 +321,22 @@ echo ""
 # 8. pnpm & PM2 Installation (Idempotent)
 # ------------------------------------------------------------------------------
 if ! command -v npm &>/dev/null; then
-  log_error "Node package manager ('npm') is not found on PATH. Ensure Node.js installed correctly."
+  log_warn "Node package manager ('npm') not found on PATH. Attempting automatic package installation..."
+  if command -v apt-get &>/dev/null; then
+    apt-get update -qq && apt-get install -y -qq npm
+  elif command -v dnf &>/dev/null; then
+    dnf install -y -q npm
+  elif command -v yum &>/dev/null; then
+    yum install -y -q npm
+  elif command -v pacman &>/dev/null; then
+    pacman -Sy --noconfirm npm
+  elif command -v zypper &>/dev/null; then
+    zypper install -y npm
+  fi
+fi
+
+if ! command -v npm &>/dev/null; then
+  log_error "Node package manager ('npm') is not found on PATH. Ensure Node.js and npm are installed correctly."
   exit 1
 fi
 
