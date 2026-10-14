@@ -119,6 +119,7 @@ else
 fi
 
 log_info "Configuring Explita Deploy at: ${BOLD}${DEPLOY_DIR}${NC}"
+echo ""
 
 # ------------------------------------------------------------------------------
 # 4. Base Utilities Detection & Batch Installation (Idempotent)
@@ -155,6 +156,9 @@ for tool in curl git openssl tar gzip; do
     exit 1
   fi
 done
+
+log_success "Base system utilities verified."
+echo ""
 
 # ------------------------------------------------------------------------------
 # 5. Clone or Update Repository from Git (Idempotent)
@@ -206,6 +210,7 @@ if [ "$TARGET_USER" != "root" ] && id "$TARGET_USER" &>/dev/null; then
     exit 1
   fi
 fi
+echo ""
 
 # ------------------------------------------------------------------------------
 # 6. Docker Engine Setup (Idempotent)
@@ -255,6 +260,7 @@ if ! docker network inspect explita-net >/dev/null 2>&1; then
   docker network create explita-net >/dev/null
   log_success "Docker network 'explita-net' created."
 fi
+echo ""
 
 # ------------------------------------------------------------------------------
 # 7. Node.js Setup (Minimum Node.js 20 required, Node.js 22 LTS default install)
@@ -305,6 +311,7 @@ if [ "$INSTALLED_NODE_MAJOR" -lt "$MIN_NODE_MAJOR" ]; then
   exit 1
 fi
 log_success "System Node.js $(node -v) verified."
+echo ""
 
 # ------------------------------------------------------------------------------
 # 8. pnpm & PM2 Installation (Idempotent)
@@ -408,6 +415,7 @@ if [ "$TARGET_NODE_PATH" != "$SYSTEM_NODE_PATH" ]; then
 fi
 
 log_info "Verified service user runtime: node ${TARGET_NODE_VERSION} (${TARGET_NODE_PATH}), pnpm ${TARGET_PNPM_VERSION} (${TARGET_PNPM_PATH}), pm2 ${TARGET_PM2_VERSION} (${TARGET_PM2_PATH})"
+echo ""
 
 # ------------------------------------------------------------------------------
 # 9. Host Persistent Storage Directories (Idempotent)
@@ -448,6 +456,7 @@ chmod 755 /var/lib/explita/postgres
 chmod 755 /var/lib/explita/redis
 
 log_success "Storage directories verified with explicit ownership and permissions at /var/lib/explita."
+echo ""
 
 # ------------------------------------------------------------------------------
 # 10. Environment Configuration (.env) - Strictly Preserves Existing State
@@ -670,6 +679,7 @@ if [ "$TARGET_USER" != "root" ] && id "$TARGET_USER" &>/dev/null; then
   fi
 fi
 chmod 600 "$ENV_FILE"
+echo ""
 
 # ------------------------------------------------------------------------------
 # 11. Install Dependencies & Build Explita Deploy Server
@@ -686,6 +696,7 @@ fi
 log_info "Building Explita Deploy server..."
 run_as_target pnpm build
 log_success "Build completed successfully."
+echo ""
 
 # ------------------------------------------------------------------------------
 # 12. PM2 Process Management (User-Aware, Idempotent start / reload)
@@ -762,6 +773,7 @@ if command -v systemctl &>/dev/null; then
 else
   log_warn "systemd not detected. Skipping systemd reboot service configuration."
 fi
+echo ""
 
 # ------------------------------------------------------------------------------
 # 13. Verify Service Health Check
@@ -773,9 +785,10 @@ if ! run_as_target pm2 describe explita-deploy >/dev/null 2>&1; then
   exit 1
 fi
 
-log_info "Verifying service health on port ${ACTIVE_PORT}..."
+HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-90}"
+log_info "Verifying service health on port ${ACTIVE_PORT} (waiting up to ${HEALTH_TIMEOUT}s for container & database provisioning)..."
 HEALTHY=false
-for i in {1..20}; do
+for ((i=1; i<=HEALTH_TIMEOUT; i++)); do
   if curl -fsS --max-time 2 "http://127.0.0.1:${ACTIVE_PORT}/health" >/dev/null 2>&1; then
     HEALTHY=true
     break
@@ -785,15 +798,22 @@ done
 
 if [ "$HEALTHY" = true ]; then
   log_success "Explita Deploy is responsive and healthy on http://127.0.0.1:${ACTIVE_PORT}."
+  echo ""
 else
-  log_error "Server process was started in PM2, but failed health check on http://127.0.0.1:${ACTIVE_PORT}/health within 20s."
+  echo ""
+  log_error "Server process was started in PM2, but did not respond to health check within ${HEALTH_TIMEOUT}s."
+  log_warn "If this is a fresh VPS installation, Docker may still be downloading base container images (PostgreSQL/Caddy) or applying initial schema migrations."
   if [ "$TARGET_USER" = "root" ]; then
-    log_error "Check live logs with: pm2 logs explita-deploy"
+    log_info "Inspect live server logs with: ${BOLD}pm2 logs explita-deploy${NC}"
   else
-    log_error "Check live logs with: pm2 logs explita-deploy (or: sudo -u ${TARGET_USER} -H pm2 logs)"
+    log_info "Inspect live server logs with: ${BOLD}pm2 logs explita-deploy${NC} (or: sudo -u ${TARGET_USER} -H pm2 logs)"
   fi
+  log_info "PM2 will report if everything completed successfully and the health check simply timed out during cold initialization."
+  log_info "Once initialization finishes, verify service health with: ${BOLD}curl -fsS http://127.0.0.1:${ACTIVE_PORT}/health${NC}"
+  echo ""
   exit 1
 fi
+echo ""
 
 # ------------------------------------------------------------------------------
 # 14. Installation Summary & Connection Instructions
