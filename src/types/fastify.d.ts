@@ -6,7 +6,6 @@ declare module "fastify" {
   interface FastifyRequest {
     ctx: {
       app: NonNullable<FormattedApp>;
-      appId: string;
     };
   }
 

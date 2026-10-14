@@ -1,5 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { findAppByIdOrName } from "../lib/app-helpers.js";
+import { stripIdPrefix } from "../lib/id.js";
 
 export async function validateRequestId(
   request: FastifyRequest,
@@ -23,7 +24,6 @@ export async function validateRequestId(
   }
 
   request.ctx = {
-    app,
-    appId: identifier,
+    app: { ...app, id: stripIdPrefix(app.id) },
   };
 }
