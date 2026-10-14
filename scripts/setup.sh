@@ -775,6 +775,44 @@ else
 fi
 echo ""
 
+FIREWALL_MANUAL_NEEDED=""
+
+# Configure host firewall (UFW / firewalld) if active
+if command -v ufw &>/dev/null && ufw status 2>/dev/null | grep -qw "active"; then
+  log_info "Active UFW firewall detected. Allowing ingress for Explita Deploy (ports ${ACTIVE_PORT}, 80, 443)..."
+  UFW_ERR=false
+  for port_rule in "${ACTIVE_PORT}/tcp" "80/tcp" "443/tcp"; do
+    if ! (ufw allow "$port_rule" comment "Explita Deploy" >/dev/null 2>&1 || ufw allow "$port_rule" >/dev/null 2>&1); then
+      UFW_ERR=true
+    fi
+  done
+  if [ "$UFW_ERR" = true ]; then
+    FIREWALL_MANUAL_NEEDED="ufw"
+    log_warn "Automatic UFW configuration could not apply all rules (manual commands will be listed at end of setup)."
+  else
+    log_success "UFW rules configured for ports ${ACTIVE_PORT}, 80, and 443."
+  fi
+  echo ""
+elif command -v firewall-cmd &>/dev/null && firewall-cmd --state &>/dev/null; then
+  log_info "Active firewalld detected. Allowing ingress for Explita Deploy (ports ${ACTIVE_PORT}, 80, 443)..."
+  FW_ERR=false
+  for port_rule in "${ACTIVE_PORT}/tcp" "80/tcp" "443/tcp"; do
+    if ! firewall-cmd --permanent --add-port="$port_rule" >/dev/null 2>&1; then
+      FW_ERR=true
+    fi
+  done
+  if ! firewall-cmd --reload >/dev/null 2>&1; then
+    FW_ERR=true
+  fi
+  if [ "$FW_ERR" = true ]; then
+    FIREWALL_MANUAL_NEEDED="firewalld"
+    log_warn "Automatic firewalld configuration could not apply all rules (manual commands will be listed at end of setup)."
+  else
+    log_success "firewalld rules configured for ports ${ACTIVE_PORT}, 80, and 443."
+  fi
+  echo ""
+fi
+
 # ------------------------------------------------------------------------------
 # 13. Verify Service Health Check
 # ------------------------------------------------------------------------------
@@ -852,6 +890,32 @@ if [ "$IS_FIRST_INSTALL" = true ]; then
 else
   echo -e "  eda config set token <your-token-from-.env>"
 fi
+echo ""
+if [ "$FIREWALL_MANUAL_NEEDED" = "ufw" ]; then
+  echo -e "${YELLOW}${BOLD}⚠ Firewall Action Required (UFW):${NC}"
+  echo -e "  Automatic UFW rule configuration failed. Please open ports manually on this VPS:"
+  echo -e "    ${BOLD}sudo ufw allow ${ACTIVE_PORT}/tcp comment \"Explita Deploy API\"${NC}"
+  echo -e "    ${BOLD}sudo ufw allow 80/tcp comment \"Explita HTTP / ACME\"${NC}"
+  echo -e "    ${BOLD}sudo ufw allow 443/tcp comment \"Explita HTTPS / TLS\"${NC}"
+  echo -e "    ${BOLD}sudo ufw reload${NC}"
+  echo ""
+elif [ "$FIREWALL_MANUAL_NEEDED" = "firewalld" ]; then
+  echo -e "${YELLOW}${BOLD}⚠ Firewall Action Required (firewalld):${NC}"
+  echo -e "  Automatic firewalld rule configuration failed. Please open ports manually on this VPS:"
+  echo -e "    ${BOLD}sudo firewall-cmd --permanent --add-port=${ACTIVE_PORT}/tcp${NC}"
+  echo -e "    ${BOLD}sudo firewall-cmd --permanent --add-port=80/tcp${NC}"
+  echo -e "    ${BOLD}sudo firewall-cmd --permanent --add-port=443/tcp${NC}"
+  echo -e "    ${BOLD}sudo firewall-cmd --reload${NC}"
+  echo ""
+fi
+
+echo -e "${BOLD}Firewall & Cloud Security Groups:${NC}"
+echo -e "  If connecting times out from external machines, ensure inbound TCP ports are open:"
+echo -e "  • ${BOLD}${ACTIVE_PORT}/tcp${NC}  (Explita Deploy API control plane)"
+echo -e "  • ${BOLD}80/tcp${NC}     (HTTP & automated Let's Encrypt / ACME challenges)"
+echo -e "  • ${BOLD}443/tcp${NC}    (HTTPS / TLS traffic for deployed applications)"
+echo -e "  Check both your host firewall (UFW/firewalld) and your cloud provider's network settings"
+echo -e "  (e.g. AWS Security Group, Hetzner, DigitalOcean, Oracle Cloud VCN Ingress Rules)."
 echo ""
 echo -e "${BOLD}Server Maintenance Commands (Run on VPS as '${TARGET_USER}'):${NC}"
 echo -e "  pm2 logs explita-deploy     # View live server logs"
