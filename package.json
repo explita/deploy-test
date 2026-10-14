@@ -1,0 +1,37 @@
+{
+  "name": "@explita/deploy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "pnpm clean && pn db:gen && tsc -p tsconfig.json",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "db:gen": "npx prisma generate",
+    "db:push": "pnpm db:gen && npx prisma db push",
+    "test": "node --import tsx --test tests/**/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1149.0",
+    "@explita/cache": "^0.2.0",
+    "@explita/env-loader": "^0.2.0",
+    "@explita/protocol": "file:./explita-protocol-0.1.0.tgz",
+    "@fastify/cors": "^10.0.2",
+    "@fastify/websocket": "^11.0.2",
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "fastify": "^5.2.1",
+    "tar": "^7.5.22",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "@types/tar": "^7.0.87",
+    "prisma": "^7.10.0",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.20.0",
+    "typescript": "^7.0.2"
+  }
+}

@@ -1,0 +1,177 @@
+generator client {
+    provider = "prisma-client"
+    output   = "../generated/prisma"
+}
+
+datasource db {
+    provider = "postgresql"
+}
+
+model App {
+    id                  String      @id @default(nanoid(10))
+    name                String
+    port                Int?
+    currentDeploymentId String?     @unique @map("current_deployment_id")
+    metadata            Json        @default("{}")
+    status              AppStatus   @default(RUNNING)
+    createdAt           DateTime    @default(now()) @map("created_at")
+    updatedAt           DateTime    @updatedAt @map("updated_at")
+    currentDeployment   Deployment? @relation(name: "AppToCurrentDeployment", fields: [currentDeploymentId], references: [id], onDelete: Cascade)
+
+    deployments    Deployment[]
+    domains        Domain[]
+    cronExecutions CronExecution[]
+    databases      AppDatabase[]
+    redis          AppRedis?
+    crons          AppCron[]
+    envs           AppEnv[]
+
+    @@index([name])
+    @@map("apps")
+}
+
+model AppCron {
+    id        String   @id @default(nanoid(10))
+    appId     String   @map("app_id")
+    name      String
+    schedule  String
+    command   String
+    timeout   Int?
+    paused    Boolean  @default(false)
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    app App @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+    @@unique([appId, name])
+    @@index([appId])
+    @@map("app_crons")
+}
+
+model AppEnv {
+    id        String   @id @default(nanoid(10))
+    appId     String   @map("app_id")
+    key       String
+    value     String
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    app App @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+    @@unique([appId, key])
+    @@index([appId])
+    @@map("app_envs")
+}
+
+model Domain {
+    id        String   @id @default(nanoid(10))
+    appId     String   @map("app_id")
+    hostname  String   @unique
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    app App @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+    @@index([appId])
+    @@map("domains")
+}
+
+model AppDatabase {
+    id        String   @id @default(nanoid(10))
+    appId     String   @map("app_id")
+    key       String   @default("default")
+    name      String   @unique
+    user      String
+    url       String
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    app App @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+    @@unique([appId, key])
+    @@index([appId])
+    @@map("app_databases")
+}
+
+model AppRedis {
+    id        String   @id @default(nanoid(10))
+    appId     String   @unique @map("app_id")
+    dbIndex   Int      @unique @map("db_index")
+    url       String
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    app App @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+    @@map("app_redis")
+}
+
+model Deployment {
+    id            String           @id @default(nanoid(10))
+    appId         String           @map("app_id")
+    image         String?
+    containerName String?          @map("container_name")
+    error         String?
+    status        DeploymentStatus @default(QUEUED)
+    metadata      Json             @default("{}")
+    startedAt     DateTime         @default(now()) @map("started_at")
+    finishedAt    DateTime?        @map("finished_at")
+
+    app        App   @relation(fields: [appId], references: [id], onDelete: Cascade)
+    log        Log?
+    currentFor App[] @relation(name: "AppToCurrentDeployment")
+
+    @@index([appId])
+    @@map("deployments")
+}
+
+model Log {
+    id           String   @id @default(nanoid(10))
+    deploymentId String   @unique @map("deployment_id")
+    messages     String[] @default([])
+    metadata     Json     @default("{}")
+    createdAt    DateTime @default(now()) @map("created_at")
+
+    deployment Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+
+    @@map("logs")
+}
+
+model CronExecution {
+    id         String    @id @default(nanoid(10))
+    appId      String    @map("app_id")
+    cronId     String    @map("cron_id")
+    cronName   String    @map("cron_name")
+    command    String
+    startedAt  DateTime  @default(now()) @map("started_at")
+    finishedAt DateTime? @map("finished_at")
+    durationMs Int?      @map("duration_ms")
+    status     String // "running" | "success" | "failed"
+    exitCode   Int?      @map("exit_code")
+    output     String    @default("")
+    manual     Boolean   @default(false)
+    createdAt  DateTime  @default(now()) @map("created_at")
+
+    app App @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+    @@index([appId, createdAt(sort: Desc)])
+    @@map("cron_executions")
+}
+
+enum DeploymentStatus {
+    QUEUED
+    BUILDING
+    STARTING
+    HEALTH_CHECK
+    PREVIEW
+    LIVE
+    FAILED
+    ROLLED_BACK
+    CANCELLED
+}
+
+enum AppStatus {
+    RUNNING
+    STOPPED
+    ERROR
+}
