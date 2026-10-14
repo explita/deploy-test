@@ -813,6 +813,22 @@ elif command -v firewall-cmd &>/dev/null && firewall-cmd --state &>/dev/null; th
   echo ""
 fi
 
+# Ensure raw iptables allows ingress if present (common on Oracle Cloud & minimal distros)
+if command -v iptables &>/dev/null; then
+  IPTABLES_MODIFIED=false
+  for port_num in "${ACTIVE_PORT}" 80 443; do
+    if ! iptables -C INPUT -p tcp --dport "$port_num" -j ACCEPT 2>/dev/null; then
+      iptables -I INPUT 1 -p tcp --dport "$port_num" -j ACCEPT 2>/dev/null || true
+      IPTABLES_MODIFIED=true
+    fi
+  done
+  if [ "$IPTABLES_MODIFIED" = true ]; then
+    if command -v netfilter-persistent &>/dev/null; then
+      netfilter-persistent save >/dev/null 2>&1 || true
+    fi
+  fi
+fi
+
 # ------------------------------------------------------------------------------
 # 13. Verify Service Health Check
 # ------------------------------------------------------------------------------
