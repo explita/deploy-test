@@ -109,7 +109,7 @@ export async function ensureDatabase(): Promise<string> {
   } else {
     await ensureManagedPostgres();
 
-    const hostPort = postgres.hostPort;
+    const hostPort = postgres.hostPort!;
     targetUrl = `postgresql://${encodeURIComponent(postgres.user)}:${encodeURIComponent(postgres.password)}@${postgres.host}:${hostPort}/${encodeURIComponent(postgres.name)}`;
     logger.always(
       `Database ready at ${postgres.host}:${hostPort}/${postgres.name}`,

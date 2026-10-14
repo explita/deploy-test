@@ -29,6 +29,7 @@ export const server = {
   twoFactorSecret: process.env.DEPLOY_2FA_SECRET?.trim() || undefined,
   dataDir: rawDataDir,
   deployBaseDir: `${rawDataDir}/deployments`,
+  redisDataDir: process.env.REDIS_DATA_DIR?.trim() || `${rawDataDir}/redis`,
   maxRequestBodySize: parseSize(
     process.env.MAX_REQUEST_BODY_SIZE,
     100 * 1024 * 1024,

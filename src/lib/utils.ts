@@ -1,7 +1,5 @@
-import { resolve } from "node:path";
 import { server } from "./constants.js";
 import { REDIS_CONTAINER_NAME } from "@explita/protocol/deploy";
-import { requireEnv } from "@explita/protocol";
 
 export function resolveRedisConfig() {
   const enabled = process.env.REDIS_ENABLED === "true";
@@ -14,7 +12,7 @@ export function resolveRedisConfig() {
       defaultPort,
       password: undefined,
       user: "default",
-      dataDir: resolve(server.dataDir, "redis"),
+      dataDir: server.redisDataDir,
       maxDatabases: 256,
       containerName: REDIS_CONTAINER_NAME,
     };
@@ -30,7 +28,6 @@ export function resolveRedisConfig() {
     port = parsed;
   }
 
-  const resolvedDataDir = resolve(requireEnv("REDIS_DATA_DIR"));
   const password = process.env.REDIS_PASSWORD?.trim() || undefined;
   const user = process.env.REDIS_USER?.trim() || "default";
   const maxDatabases = Number(process.env.REDIS_MAX_DATABASES) || 256;
@@ -41,7 +38,7 @@ export function resolveRedisConfig() {
     defaultPort,
     password,
     user,
-    dataDir: resolvedDataDir,
+    dataDir: server.redisDataDir,
     maxDatabases,
     containerName: REDIS_CONTAINER_NAME,
   };

@@ -10,7 +10,7 @@
 #
 # Usage:
 #   # Option 1: Direct one-liner on a fresh VPS
-#   curl -fsSL https://raw.githubusercontent.com/explita/deploy/main/scripts/setup.sh | sudo bash
+#   curl -fsSL https://raw.githubusercontent.com/explita/deploy-test/main/scripts/setup.sh | sudo bash
 #
 #   # Option 2: Run from cloned repository
 #   cd /opt/explita-deploy
@@ -260,22 +260,22 @@ if [ ! -f "$ENV_FILE" ]; then
 # 1. IMMUTABLE VALUES - DO NOT CHANGE ONCE APPS ARE CREATED!
 APP_ENCRYPTION_KEY=${GEN_ENCRYPTION_KEY}
 DATA_DIR=/var/lib/explita
-DB_DATA_DIR=/var/lib/explita/postgres
-DB_PASSWORD=${GEN_DB_PASS}
-DB_USER=explita
-DB_NAME=explita_deploy
-DB_PORT=5432
+POSTGRES_ROOT_PASSWORD=${GEN_DB_PASS}
+# POSTGRES_PORT=5432
+# POSTGRES_DATA_DIR=/var/lib/explita/postgres
 
 # 2. RUNTIME / ROTATABLE VALUES
 PORT=39756
 HOST=0.0.0.0
 DEPLOY_TOKEN=${GEN_DEPLOY_TOKEN}
+# DEPLOY_PASSCODE=3434
+# DEPLOY_2FA_SECRET=JBSWY3DPEHPK3PXF
 LOG_INFO=false
 MAX_REQUEST_BODY_SIZE=100MB
 IMAGE_RETENTION_LIMIT=3
 CRON_HISTORY_LIMIT=50
 REDIS_ENABLED=false
-TUNNEL_ENABLED=false
+TUNNEL_ENABLED=true
 EOF
   chmod 600 "$ENV_FILE"
   log_success "Created fresh .env with secure random tokens."
