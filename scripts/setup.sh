@@ -75,7 +75,7 @@ TARGET_USER="${SUDO_USER:-$USER}"
 # 3. Configuration & Directory Resolution
 # ------------------------------------------------------------------------------
 DEFAULT_INSTALL_DIR="/opt/explita-deploy"
-REPO_URL="${REPO_URL:-https://github.com/explita/deploy.git}"
+REPO_URL="${REPO_URL:-https://github.com/explita/deploy-test.git}"
 BRANCH="${BRANCH:-main}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "")"
