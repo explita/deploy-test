@@ -38,7 +38,7 @@ await app.register(cors);
 await app.register(websocket);
 
 app.addHook("onRequest", authHook);
-app.addHook("preValidation", normalizeIdPrefixesHook);
+app.addHook("onRequest", normalizeIdPrefixesHook);
 
 app.get("/health", async () => ({ ok: true, service: "explita-deploy" }));
 
