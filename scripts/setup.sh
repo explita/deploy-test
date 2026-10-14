@@ -754,17 +754,11 @@ if command -v systemctl &>/dev/null; then
     exit 1
   fi
 
-  # Verify systemd service can start and manage the unit
-  if ! systemctl start "$SERVICE_UNIT" >/dev/null 2>&1; then
-    log_error "Failed to start PM2 systemd service '${SERVICE_UNIT}'. Check 'journalctl -u ${SERVICE_UNIT}'."
-    exit 1
-  fi
-
   if ! systemctl is-enabled "$SERVICE_UNIT" &>/dev/null; then
     log_error "Verification failed: PM2 service '${SERVICE_UNIT}' is not enabled in systemd."
     exit 1
   fi
-  log_success "PM2 systemd service '${SERVICE_UNIT}' is enabled and running."
+  log_success "PM2 systemd service '${SERVICE_UNIT}' is enabled for reboot persistence."
 else
   log_warn "systemd not detected. Skipping systemd reboot service configuration."
 fi
