@@ -314,9 +314,9 @@ if ! command -v npm &>/dev/null; then
   exit 1
 fi
 
-DESIRED_PNPM="${PNPM_VERSION:-10}"
+DESIRED_PNPM="${PNPM_VERSION:-12}"
 if [[ ! "$DESIRED_PNPM" =~ ^[0-9]+$ ]]; then
-  log_error "PNPM_VERSION must be a numeric major version (e.g. 10). Got: '${DESIRED_PNPM}'"
+  log_error "PNPM_VERSION must be a numeric major version (e.g. 12). Got: '${DESIRED_PNPM}'"
   exit 1
 fi
 
@@ -366,10 +366,19 @@ else
   log_info "PM2 is already installed ($(pm2 -v 2>/dev/null || echo 'active'))."
 fi
 
-# Verify runtime access and binary resolution under service user
-TARGET_NODE_PATH=$(run_as_target command -v node 2>/dev/null || echo "")
-TARGET_PM2_PATH=$(run_as_target command -v pm2 2>/dev/null || echo "")
-TARGET_PNPM_PATH=$(run_as_target command -v pnpm 2>/dev/null || echo "")
+# Helper to resolve binary path under service user without failing on shell built-ins
+get_target_bin_path() {
+  local bin="$1"
+  if [ "$TARGET_USER" = "root" ]; then
+    command -v "$bin" 2>/dev/null || echo ""
+  else
+    sudo -u "$TARGET_USER" -H sh -c "command -v '$bin'" 2>/dev/null || echo ""
+  fi
+}
+
+TARGET_NODE_PATH=$(get_target_bin_path node)
+TARGET_PM2_PATH=$(get_target_bin_path pm2)
+TARGET_PNPM_PATH=$(get_target_bin_path pnpm)
 
 if [ -z "$TARGET_NODE_PATH" ] || [ -z "$TARGET_PM2_PATH" ] || [ -z "$TARGET_PNPM_PATH" ]; then
   log_error "Service user verification failed: 'node', 'pm2', or 'pnpm' is not accessible under user '${TARGET_USER}'."
