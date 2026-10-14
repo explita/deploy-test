@@ -98,7 +98,7 @@ export async function updateApp(request: FastifyRequest, reply: FastifyReply) {
     delete meta.resources;
   }
 
-  const updatedApp = await prisma.app.update({
+  const updated = await prisma.app.update({
     where: { id: app.id },
     data: {
       ...(input.name ? { name: input.name.trim() } : {}),
@@ -115,11 +115,13 @@ export async function updateApp(request: FastifyRequest, reply: FastifyReply) {
     },
   });
 
+  const updatedApp = formatApp(updated, { showAll: true });
+
   let tunnelUrl: string | null = null;
   if (tunnelPref === false) {
-    await removeAppTunnel(app);
+    await removeAppTunnel(updatedApp);
   } else if (tunnelPref === true) {
-    tunnelUrl = await syncAppTunnel(app);
+    tunnelUrl = await syncAppTunnel(updatedApp);
   }
 
   if (input.crons !== undefined) {
@@ -154,7 +156,7 @@ export async function updateApp(request: FastifyRequest, reply: FastifyReply) {
   return reply.send({
     success: true,
     data: {
-      ...formatApp(updatedApp, { showAll: true }),
+      ...updatedApp,
       tunnelUrl,
     },
   });

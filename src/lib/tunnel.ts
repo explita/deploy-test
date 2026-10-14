@@ -11,6 +11,7 @@ import {
   getPreviewTunnelSubdomain,
 } from "@explita/protocol/deploy";
 import { InputJsonValue } from "../generated/prisma/internal/prismaNamespace.js";
+import { stripIdPrefix } from "./id.js";
 
 export async function ensureTunnelImage(): Promise<boolean> {
   if (!tunnel.enabled || !tunnel.image) {
@@ -115,15 +116,19 @@ export async function syncAppTunnel(app: FormattedApp): Promise<string | null> {
   }
 
   const isMaintenance = Boolean(meta.maintenance?.enabled);
+  const rawAppId = stripIdPrefix(app.id);
+  const rawDepId = stripIdPrefix(app.currentDeploymentId || "");
 
-  const activeDeployment = app.currentDeploymentId
-    ? await prisma.deployment.findUnique({
-        where: { id: app.currentDeploymentId },
-      })
-    : await prisma.deployment.findFirst({
-        where: { appId: app.id, status: { in: ["LIVE", "HEALTH_CHECK"] } },
-        orderBy: { startedAt: "desc" },
-      });
+  const activeDeployment = app.currentDeployment
+    ? app.currentDeployment
+    : rawDepId
+      ? await prisma.deployment.findUnique({
+          where: { id: rawDepId },
+        })
+      : await prisma.deployment.findFirst({
+          where: { appId: rawAppId, status: { in: ["LIVE", "HEALTH_CHECK"] } },
+          orderBy: { startedAt: "desc" },
+        });
 
   if (!isMaintenance && !activeDeployment?.containerName) {
     await removeAppTunnel(app);
@@ -164,7 +169,7 @@ export async function syncAppTunnel(app: FormattedApp): Promise<string | null> {
     return null;
   }
 
-  const tunnelContainerName = getAppTunnelContainerName(app.id);
+  const tunnelContainerName = getAppTunnelContainerName(rawAppId);
   const subdomain = getAppTunnelSubdomain(app);
   const targetHost = isMaintenance
     ? caddy.containerName
@@ -184,7 +189,7 @@ export async function syncAppTunnel(app: FormattedApp): Promise<string | null> {
     "--network",
     docker.network,
     "--label",
-    `explita.app.id=${app.id}`,
+    `explita.app.id=${rawAppId}`,
     "--label",
     `explita.managed=true`,
     tunnel.image,
@@ -224,7 +229,7 @@ export async function syncAppTunnel(app: FormattedApp): Promise<string | null> {
   meta.tunnel = { enabled: true, url: tunnelUrl, subdomain: subdomain };
   // Persist tunnel URL in App metadata for fast lookups
   await prisma.app.update({
-    where: { id: app.id },
+    where: { id: rawAppId },
     data: {
       metadata: meta as InputJsonValue,
     },
@@ -236,7 +241,8 @@ export async function syncAppTunnel(app: FormattedApp): Promise<string | null> {
 }
 
 export async function removeAppTunnel(app: FormattedApp): Promise<void> {
-  const tunnelContainerName = getAppTunnelContainerName(app.id);
+  const rawAppId = stripIdPrefix(app.id);
+  const tunnelContainerName = getAppTunnelContainerName(rawAppId);
   const rm = await run("docker", ["rm", "-f", tunnelContainerName]).catch(
     () => null,
   );
@@ -250,12 +256,12 @@ export async function removeAppTunnel(app: FormattedApp): Promise<void> {
     if ("tunnel" in meta) {
       delete meta.tunnel;
       await prisma.app.update({
-        where: { id: app.id },
+        where: { id: rawAppId },
         data: { metadata: meta as InputJsonValue },
       });
     }
   } catch (err) {
-    logger.warn(`Failed to clear tunnel metadata for ${app.id}:`, err);
+    logger.warn(`Failed to clear tunnel metadata for ${rawAppId}:`, err);
   }
 }
 

@@ -24,6 +24,18 @@ export async function validateRequestId(
   }
 
   request.ctx = {
-    app: { ...app, id: stripIdPrefix(app.id) },
+    app: {
+      ...app,
+      id: stripIdPrefix(app.id),
+      currentDeploymentId: app.currentDeploymentId
+        ? stripIdPrefix(app.currentDeploymentId)
+        : null,
+      currentDeployment: app.currentDeployment
+        ? {
+            ...app.currentDeployment,
+            id: stripIdPrefix(app.currentDeployment.id),
+          }
+        : null,
+    },
   };
 }

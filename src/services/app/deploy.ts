@@ -15,6 +15,7 @@ export async function deployApp(request: FastifyRequest, reply: FastifyReply) {
   const app = request.ctx.app;
 
   const query = request.query as Record<string, string> | undefined;
+
   if (query?.tunnel !== undefined) {
     const isTunnelWanted = query.tunnel !== "false";
     const existingMeta = app.metadata;
