@@ -312,41 +312,61 @@ async function handleMaitenanceMode(app: FormattedApp, appConfigFile: string) {
   const meta = app.metadata;
 
   const domainHosts = app.domains.map((d) => d.hostname.trim()).filter(Boolean);
-  const tunnelHost =
+  const rawTunnelUrl =
     meta.tunnel?.enabled !== false && meta.tunnel?.url ? meta.tunnel.url : null;
 
-  const allHosts = [...domainHosts, ...(tunnelHost ? [tunnelHost] : [])];
+  const customFile = resolveCustomMaintenanceFile(app.id);
+  let maintenanceDirective: string;
 
-  if (allHosts.length > 0) {
-    const customFile = resolveCustomMaintenanceFile(app.id);
-    let maintenanceDirective: string;
-
-    if (customFile) {
-      logger.info(
-        `Serving custom maintenance file (${customFile}) from disk for ${app.name}`,
-      );
-      maintenanceDirective = `    root * /var/www/custom
+  if (customFile) {
+    logger.info(
+      `Serving custom maintenance file (${customFile}) from disk for ${app.name}`,
+    );
+    maintenanceDirective = `    root * /var/www/custom
     rewrite * /${customFile}
     file_server {
         status 503
     }`;
-    } else {
-      const fallbackHtml = renderMaintenanceHtml(app.name);
-      maintenanceDirective = `    respond <<HTML
+  } else {
+    const fallbackHtml = renderMaintenanceHtml(app.name);
+    maintenanceDirective = `    respond <<HTML
 ${fallbackHtml}
 HTML 503`;
-    }
+  }
 
-    const caddyConfig = `${allHosts.join(", ")} {
+  const siteBlocks: string[] = [];
+
+  // 1. User-configured custom domains (Caddy manages public HTTPS for these)
+  if (domainHosts.length > 0) {
+    siteBlocks.push(`${domainHosts.join(", ")} {
     header Content-Type "text/html; charset=utf-8"
     header Retry-After 300
     header Cache-Control "no-store, no-cache, must-revalidate"
 ${maintenanceDirective}
-}
-`;
+}`);
+  }
+
+  // 2. Tunnel hostname (TLS is terminated at external tunnel server; local proxy connects via HTTP on port 80)
+  if (rawTunnelUrl) {
+    const cleanTunnelHostname = rawTunnelUrl
+      .replace(/^https?:\/\//i, "")
+      .split("/")[0]
+      .trim();
+    if (cleanTunnelHostname) {
+      siteBlocks.push(`http://${cleanTunnelHostname} {
+    header Content-Type "text/html; charset=utf-8"
+    header Retry-After 300
+    header Cache-Control "no-store, no-cache, must-revalidate"
+${maintenanceDirective}
+}`);
+    }
+  }
+
+  if (siteBlocks.length > 0) {
+    const caddyConfig = `${siteBlocks.join("\n\n")}\n`;
     await writeFile(appConfigFile, caddyConfig, "utf8");
     logger.info(
-      `Maintenance mode route active for ${app.name} (${allHosts.join(", ")})`,
+      `Maintenance mode route active for ${app.name}`,
     );
   } else {
     if (existsSync(appConfigFile)) {
