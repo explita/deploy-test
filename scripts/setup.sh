@@ -547,7 +547,7 @@ else
   log_info "Existing .env detected. Preserving all existing values..."
 
   # Reject unsupported syntax variations for managed keys before processing
-  MANAGED_KEYS_REGEX="APP_ENCRYPTION_KEY|DEPLOY_TOKEN|POSTGRES_ROOT_PASSWORD|PORT|DATA_DIR|HOST|LOG_INFO|MAX_REQUEST_BODY_SIZE|IMAGE_RETENTION_LIMIT|CRON_HISTORY_LIMIT|REDIS_ENABLED|TUNNEL_ENABLED"
+  MANAGED_KEYS_REGEX="APP_ENCRYPTION_KEY|DEPLOY_TOKEN|POSTGRES_ROOT_PASSWORD|PORT|DATA_DIR|HOST|LOG_INFO|MAX_REQUEST_BODY_SIZE|IMAGE_RETENTION_LIMIT|CRON_HISTORY_LIMIT|REDIS_ENABLED|TUNNEL_ENABLED|TUNNEL_TOKEN"
 
   # 1. Reject leading whitespace before managed keys
   if grep -q -E "^[[:space:]]+(${MANAGED_KEYS_REGEX})" "$ENV_FILE" 2>/dev/null; then
@@ -627,7 +627,7 @@ else
 fi
 
 # Check and reject duplicate definitions for all managed keys
-for key in APP_ENCRYPTION_KEY DEPLOY_TOKEN POSTGRES_ROOT_PASSWORD PORT DATA_DIR HOST LOG_INFO MAX_REQUEST_BODY_SIZE IMAGE_RETENTION_LIMIT CRON_HISTORY_LIMIT REDIS_ENABLED TUNNEL_ENABLED; do
+for key in APP_ENCRYPTION_KEY DEPLOY_TOKEN POSTGRES_ROOT_PASSWORD PORT DATA_DIR HOST LOG_INFO MAX_REQUEST_BODY_SIZE IMAGE_RETENTION_LIMIT CRON_HISTORY_LIMIT REDIS_ENABLED TUNNEL_ENABLED TUNNEL_TOKEN; do
   COUNT=$(grep -c -E "^${key}=" "$ENV_FILE" 2>/dev/null || echo 0)
   if [ "$COUNT" -gt 1 ]; then
     log_error "Duplicate configuration key detected: '${key}' appears ${COUNT} times in ${ENV_FILE}."
@@ -690,6 +690,33 @@ for num_key in IMAGE_RETENTION_LIMIT CRON_HISTORY_LIMIT; do
 done
 
 ACTIVE_TOKEN="$TOKEN_VAL"
+
+if [ -n "${TUNNEL_TOKEN:-}" ] && [ -z "$(get_env_val 'TUNNEL_TOKEN')" ]; then
+  echo "TUNNEL_TOKEN=${TUNNEL_TOKEN}" >> "$ENV_FILE"
+  log_success "Saved TUNNEL_TOKEN from environment into ${ENV_FILE}."
+fi
+
+# Optional interactive preview tunnel configuration
+if [ -z "$(get_env_val 'TUNNEL_TOKEN')" ]; then
+  if { [ -t 0 ] || { [ -c /dev/tty ] && (: < /dev/tty) 2>/dev/null; }; } && [ "${SKIP_TUNNEL_SETUP:-false}" != "true" ]; then
+    echo ""
+    if [ -c /dev/tty ] && (: < /dev/tty) 2>/dev/null; then
+      read -r -p "Configure automated preview tunnels now? [Y/n]: " WANT_TUNNEL < /dev/tty || WANT_TUNNEL="y"
+    else
+      read -r -p "Configure automated preview tunnels now? [Y/n]: " WANT_TUNNEL || WANT_TUNNEL="y"
+    fi
+    case "$WANT_TUNNEL" in
+      [yY][eE][sS]|[yY]|"")
+        if [ -f "$DEPLOY_DIR/scripts/setup-tunnel.sh" ]; then
+          (cd "$DEPLOY_DIR" && bash "$DEPLOY_DIR/scripts/setup-tunnel.sh" || true)
+        fi
+        ;;
+      *)
+        log_info "Skipped preview tunnel setup (run 'sudo bash scripts/setup-tunnel.sh' anytime)."
+        ;;
+    esac
+  fi
+fi
 
 if [ "$TARGET_USER" != "root" ] && id "$TARGET_USER" &>/dev/null; then
   if ! chown "$TARGET_USER:$TARGET_GROUP" "$ENV_FILE"; then
@@ -906,6 +933,13 @@ echo -e "Server Port    : ${BOLD}${ACTIVE_PORT}${NC}"
 echo -e "${ENDPOINT_LABEL}: ${BOLD}${DISPLAY_URL}${NC}"
 echo -e "Storage Dir    : /var/lib/explita"
 echo -e "Release        : ${BOLD}commit ${COMMIT_HASH}${NC}"
+
+ACTIVE_TUNNEL_TOKEN=$(get_env_val "TUNNEL_TOKEN")
+if [ -n "$ACTIVE_TUNNEL_TOKEN" ]; then
+  echo -e "Preview Tunnels: ${GREEN}Active (tunnel.explita.ng)${NC}"
+else
+  echo -e "Preview Tunnels: ${YELLOW}Not configured${NC}  ${DIM}(run: sudo bash scripts/setup-tunnel.sh)${NC}"
+fi
 
 if [ "$IS_FIRST_INSTALL" = true ]; then
   echo -e "Auth Token     : ${YELLOW}${BOLD}${ACTIVE_TOKEN}${NC}  ${DIM}(Displayed once on initial setup — store securely!)${NC}"
