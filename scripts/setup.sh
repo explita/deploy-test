@@ -263,10 +263,10 @@ fi
 echo ""
 
 # ------------------------------------------------------------------------------
-# 7. Node.js Setup (Minimum Node.js 20 required, Node.js 22 LTS default install)
+# 7. Node.js Setup (Minimum Node.js 22 required, Node.js 24 default install)
 # ------------------------------------------------------------------------------
-MIN_NODE_MAJOR=20
-INSTALL_NODE_MAJOR=22
+MIN_NODE_MAJOR=22
+INSTALL_NODE_MAJOR=24
 NODE_NEEDS_INSTALL=true
 
 if command -v node &>/dev/null && command -v npm &>/dev/null; then

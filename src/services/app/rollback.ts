@@ -9,8 +9,9 @@ import { syncAppTunnel } from "../../lib/tunnel.js";
 import { logger } from "@explita/protocol";
 
 import { deployer } from "../../lib/deployer.js";
-import { findDeployment } from "../../lib/app-helpers.js";
+import { findDeployment, findAppByIdOrName } from "../../lib/app-helpers.js";
 import { formatDeploymentId, formatAppId } from "../../lib/id.js";
+import { cronScheduler } from "../../lib/cron-scheduler.js";
 
 export async function rollbackDeployment(
   request: FastifyRequest,
@@ -161,12 +162,21 @@ export async function rollbackDeployment(
     });
   });
 
+  const liveApp = await findAppByIdOrName(app.id, true);
+
   await syncAppCaddy(app.id).catch((err) => {
     logger.warn(`[rollback] Warning: Failed to sync Caddy domains:`, err);
   });
 
-  await syncAppTunnel(app).catch((err) => {
-    logger.warn(`[rollback] Warning: Failed to sync tunnel:`, err);
+  const tunnelUrl = await syncAppTunnel(liveApp!, newContainerName).catch(
+    (err) => {
+      logger.warn(`[rollback] Warning: Failed to sync tunnel:`, err);
+      return null;
+    },
+  );
+
+  await cronScheduler.syncApp(app.id).catch((err) => {
+    logger.warn(`[rollback] Warning: Failed to sync cron scheduler:`, err);
   });
 
   await saveDeploymentLogs(target.id, logs).catch((err) => {
@@ -179,6 +189,7 @@ export async function rollbackDeployment(
       ok: true,
       deploymentId: formatDeploymentId(target.id),
       appId: formatAppId(app.id),
+      tunnelUrl: tunnelUrl || null,
     },
   });
 }
