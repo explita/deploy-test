@@ -49,17 +49,35 @@ export function formatDatabaseId(rawId: string): string {
 }
 
 export function stripAppPrefixes(app: FormattedApp) {
+  const cleanId = stripIdPrefix(app.id);
+  const cleanDeployId = app.currentDeploymentId
+    ? stripIdPrefix(app.currentDeploymentId)
+    : null;
+  const databases = app.databases.map((db) => ({
+    ...db,
+    id: stripIdPrefix(db.id),
+  }));
+  const databasesMap = new Map(databases.map((db) => [db.key, db]));
+  const crons = app.crons.map((c) => ({
+    ...c,
+    id: stripIdPrefix(c.id),
+    appId: stripIdPrefix(c.appId),
+  }));
+  const cronsMap = new Map(crons.map((c) => [c.id, c]));
+
   return {
     ...app,
-    id: stripIdPrefix(app.id),
-    currentDeploymentId: app.currentDeploymentId
-      ? stripIdPrefix(app.currentDeploymentId)
-      : null,
+    id: cleanId,
+    currentDeploymentId: cleanDeployId,
     currentDeployment: app.currentDeployment
       ? {
           ...app.currentDeployment,
           id: stripIdPrefix(app.currentDeployment.id),
         }
       : null,
+    databases,
+    databasesMap,
+    crons,
+    cronsMap,
   };
 }

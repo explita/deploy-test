@@ -4,6 +4,7 @@ import { caddy } from "./constants.js";
 import { notificationService } from "./notification-service.js";
 import { logger } from "@explita/protocol";
 import { formatApp, FormattedApp } from "./formatters/app.js";
+import { stripAppPrefixes } from "./id.js";
 
 interface UnhealthyTracker {
   reported: boolean;
@@ -56,7 +57,9 @@ export class ContainerHealthMonitor {
         },
       });
 
-      const formattedApps = apps.map((app) => formatApp(app));
+      const formattedApps = apps.map((app) =>
+        stripAppPrefixes(formatApp(app)),
+      );
 
       for (const app of formattedApps) {
         if (app.currentDeployment?.status !== "LIVE") continue;

@@ -11,6 +11,7 @@ import {
 } from "@explita/protocol/deploy";
 import { logger } from "@explita/protocol";
 import { findAppByIdOrName } from "./app-helpers.js";
+import { stripIdPrefix } from "./id.js";
 import { cron } from "./constants.js";
 import { notificationService } from "./notification-service.js";
 
@@ -20,6 +21,8 @@ interface ActiveCronJob extends CronJobConfig {
   schedule: string;
   command: string;
   running?: boolean;
+  failureReported?: boolean;
+  consecutiveFailures?: number;
 }
 
 interface AppCronState {
@@ -85,27 +88,27 @@ class CronScheduler {
   }
 
   public async syncApp(appId: string): Promise<void> {
-    const app = await findAppByIdOrName(appId);
+    const app = await findAppByIdOrName(appId, true);
 
     if (
       !app ||
       !app.currentDeployment ||
       app.currentDeployment.status !== "LIVE"
     ) {
-      this.removeApp(appId);
+      this.removeApp(app ? app.id : stripIdPrefix(appId));
       return;
     }
 
     const rawCrons = app.crons;
 
-    let state = this.appStates.get(appId);
+    let state = this.appStates.get(app.id);
     if (!state) {
       state = {
-        appId,
+        appId: app.id,
         jobs: new Map(),
         lastExecutions: new Map(),
       };
-      this.appStates.set(appId, state);
+      this.appStates.set(app.id, state);
     }
 
     const nextJobs = new Map<string, ActiveCronJob>();
@@ -131,6 +134,8 @@ class CronScheduler {
         timeout,
         paused,
         running: existing?.running || false,
+        failureReported: existing?.failureReported || false,
+        consecutiveFailures: existing?.consecutiveFailures || 0,
       });
     }
 
@@ -399,12 +404,14 @@ class CronScheduler {
       );
     }
 
-    const app = await findAppByIdOrName(state.appId);
+    const app = await findAppByIdOrName(state.appId, true);
     const deployment = app?.currentDeployment;
     const containerName = deployment?.containerName;
     if (!containerName || !deployment || deployment.status !== "LIVE") {
       const msg = `Application "${state.appId}" has no active LIVE container to execute cron "${job.name}".`;
       logger.warn(`[cron] ${msg}`);
+      // Unsync/remove dead app from active scheduler so it doesn't repeatedly loop every minute
+      this.removeApp(state.appId);
       throw new Error(msg);
     }
 
@@ -412,11 +419,12 @@ class CronScheduler {
     const executionId = randomUUID();
     const startTime = Date.now();
     const startedAt = new Date(startTime).toISOString();
+    const rawCronId = stripIdPrefix(job.id);
 
     const record: CronExecutionRecord = {
       id: executionId,
-      appId: state.appId,
-      cronId: job.id,
+      appId: app.id,
+      cronId: rawCronId,
       cronName: job.name,
       command: job.command,
       startedAt,
@@ -430,8 +438,8 @@ class CronScheduler {
       .create({
         data: {
           id: executionId,
-          appId: state.appId,
-          cronId: job.id,
+          appId: app.id,
+          cronId: rawCronId,
           cronName: job.name,
           command: job.command,
           startedAt: new Date(startTime),
@@ -507,35 +515,53 @@ class CronScheduler {
         });
 
       if (record.status === "failed") {
-        notificationService
-          .notify(
-            {
-              event: "cron_failed",
-              title: `⏰ Cron Job Failed: ${job.name} (${app.name})`,
-              level: "error",
-              appName: app.name,
-              appId: app.id,
-              description: `Cron job "${job.name}" failed with exit code ${record.exitCode}`,
-              snippet: record.output,
-              details: {
-                cronId: job.id,
-                schedule: job.schedule,
-                command: job.command,
-                exitCode: record.exitCode,
-                duration: `${record.durationMs}ms`,
+        job.consecutiveFailures = (job.consecutiveFailures || 0) + 1;
+
+        // Only send notification on first failure in a streak (or explicit manual run) to prevent minute-by-minute spam
+        if (!job.failureReported || manual) {
+          job.failureReported = true;
+          notificationService
+            .notify(
+              {
+                event: "cron_failed",
+                title: `⏰ Cron Job Failed: ${job.name} (${app.name})`,
+                level: "error",
+                appName: app.name,
+                appId: app.id,
+                description: `Cron job "${job.name}" failed with exit code ${record.exitCode}`,
+                snippet: record.output,
+                details: {
+                  cronId: job.id,
+                  schedule: job.schedule,
+                  command: job.command,
+                  exitCode: record.exitCode,
+                  duration: `${record.durationMs}ms`,
+                  ...(job.consecutiveFailures > 1
+                    ? { failureStreak: job.consecutiveFailures }
+                    : {}),
+                },
               },
-            },
-            app,
-          )
-          .catch((notifyErr) => {
-            logger.warn(`[cron] Failed to send cron failure alert:`, notifyErr);
-          });
+              app,
+            )
+            .catch((notifyErr) => {
+              logger.warn(`[cron] Failed to send cron failure alert:`, notifyErr);
+            });
+        }
+      } else {
+        // Successful execution - reset failure streak and log recovery if previously failing
+        if (job.failureReported) {
+          logger.info(
+            `[cron] Job "${job.name}" for app "${app.name}" has recovered to SUCCESS after ${job.consecutiveFailures} failure(s).`,
+          );
+        }
+        job.failureReported = false;
+        job.consecutiveFailures = 0;
       }
 
       // Prune excess executions beyond user-configured cronHistoryLimit
       try {
         const excess = await prisma.cronExecution.findMany({
-          where: { appId: state.appId },
+          where: { appId: app.id },
           orderBy: { createdAt: "desc" },
           skip: cron.historyLimit,
           select: { id: true },

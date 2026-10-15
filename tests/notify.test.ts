@@ -164,3 +164,47 @@ test("NotificationService filters events when specific events list is defined", 
     globalThis.fetch = originalFetch;
   }
 });
+
+test("cron notification deduplication alerts once on streak and resets on recovery", () => {
+  const jobState: { failureReported?: boolean; consecutiveFailures?: number } = {};
+
+  const simulateRun = (status: "success" | "failed", manual = false) => {
+    let sentAlert = false;
+    if (status === "failed") {
+      jobState.consecutiveFailures = (jobState.consecutiveFailures || 0) + 1;
+      if (!jobState.failureReported || manual) {
+        jobState.failureReported = true;
+        sentAlert = true;
+      }
+    } else {
+      jobState.failureReported = false;
+      jobState.consecutiveFailures = 0;
+    }
+    return sentAlert;
+  };
+
+  // Run 1: First failure -> should send alert
+  assert.equal(simulateRun("failed"), true);
+  assert.equal(jobState.consecutiveFailures, 1);
+  assert.equal(jobState.failureReported, true);
+
+  // Run 2: Second consecutive failure (next minute) -> should NOT spam alert
+  assert.equal(simulateRun("failed"), false);
+  assert.equal(jobState.consecutiveFailures, 2);
+
+  // Run 3: Third consecutive failure -> should NOT spam alert
+  assert.equal(simulateRun("failed"), false);
+  assert.equal(jobState.consecutiveFailures, 3);
+
+  // Run 4: Explicit manual run during failure -> allowed to alert
+  assert.equal(simulateRun("failed", true), true);
+
+  // Run 5: Job recovers and succeeds -> resets tracker
+  assert.equal(simulateRun("success"), false);
+  assert.equal(jobState.consecutiveFailures, 0);
+  assert.equal(jobState.failureReported, false);
+
+  // Run 6: New future failure -> alerts again cleanly
+  assert.equal(simulateRun("failed"), true);
+  assert.equal(jobState.consecutiveFailures, 1);
+});

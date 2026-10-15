@@ -758,7 +758,7 @@ export class Deployer {
       },
       include: { domains: true, currentDeployment: true },
     });
-    const liveApp = formatApp(liveAppRecord);
+    const liveApp = stripAppPrefixes(formatApp(liveAppRecord));
 
     await syncAppCaddy(app.id).catch((err) => {
       stateLog(`[caddy] Warning: Failed to sync domains: ${err}`);

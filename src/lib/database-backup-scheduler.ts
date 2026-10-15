@@ -1,9 +1,10 @@
 import { prisma } from "./prisma.js";
-import { matchesCron, AppDatabase } from "@explita/protocol/deploy";
+import { matchesCron } from "@explita/protocol/deploy";
 import { logger } from "@explita/protocol";
 import { executeDatabaseBackup } from "../services/database/backup/helpers/exec.js";
 import { notificationService } from "./notification-service.js";
 import { formatApp, FormattedApp } from "./formatters/app.js";
+import { stripAppPrefixes } from "./id.js";
 import { getAllSchedules } from "../services/database/backup/schedule.js";
 
 class DatabaseBackupScheduler {
@@ -51,7 +52,7 @@ class DatabaseBackupScheduler {
         },
       });
 
-      const formattedApps = apps.map((app) => formatApp(app));
+      const formattedApps = apps.map((app) => stripAppPrefixes(formatApp(app)));
 
       const now = new Date();
 

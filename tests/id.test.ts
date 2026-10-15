@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   stripIdPrefix,
+  stripAppPrefixes,
   formatAppId,
   formatDeploymentId,
   formatCronId,
@@ -46,4 +47,36 @@ test("stripIdPrefix does not accidentally strip 10-char raw nanoids starting wit
   const formatted = formatAppId(rawCoincidental);
   assert.equal(formatted, "app_app_123456");
   assert.equal(stripIdPrefix(formatted), "app_123456");
+});
+
+test("stripAppPrefixes removes prefixes from app id, deployment id, databases, and crons", () => {
+  const mockFormattedApp: any = {
+    id: "app_s_uu3JUzdG",
+    currentDeploymentId: "dep_-bqX25k6ty",
+    currentDeployment: {
+      id: "dep_-bqX25k6ty",
+      containerName: "explita-app-test",
+    },
+    databases: [
+      { id: "db_d123456789", key: "default", name: "app_db" },
+    ],
+    databasesMap: new Map([
+      ["default", { id: "db_d123456789", key: "default", name: "app_db" }],
+    ]),
+    crons: [
+      { id: "cron_c123456789", appId: "app_s_uu3JUzdG", name: "cleanup", schedule: "* * * * *" },
+    ],
+    cronsMap: new Map([
+      ["cron_c123456789", { id: "cron_c123456789", appId: "app_s_uu3JUzdG", name: "cleanup", schedule: "* * * * *" }],
+    ]),
+  };
+
+  const stripped = stripAppPrefixes(mockFormattedApp);
+  assert.equal(stripped.id, "s_uu3JUzdG");
+  assert.equal(stripped.currentDeploymentId, "-bqX25k6ty");
+  assert.equal(stripped.currentDeployment?.id, "-bqX25k6ty");
+  assert.equal(stripped.databases[0].id, "d123456789");
+  assert.equal(stripped.crons[0].id, "c123456789");
+  assert.equal(stripped.crons[0].appId, "s_uu3JUzdG");
+  assert.equal(stripped.cronsMap.has("c123456789"), true);
 });

@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma.js";
 import { syncAppCaddy } from "../../lib/caddy.js";
 import { syncAppTunnel } from "../../lib/tunnel.js";
 import { formatApp } from "../../lib/formatters/app.js";
+import { stripAppPrefixes } from "../../lib/id.js";
 import { InputJsonValue } from "../../generated/prisma/internal/prismaNamespace.js";
 import { resolveCustomMaintenancePage } from "../../lib/maintenance-helpers.js";
 
@@ -63,7 +64,7 @@ export async function setMaintenance(
 
   // Re-sync Caddy routes and Tunnel routing
   await syncAppCaddy(app.id);
-  await syncAppTunnel(formatApp(updatedRawApp));
+  await syncAppTunnel(stripAppPrefixes(formatApp(updatedRawApp)));
 
   const customPage = Boolean(resolveCustomMaintenancePage(app.id));
 

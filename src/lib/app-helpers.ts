@@ -1,15 +1,20 @@
 import { AppDbEntry } from "@explita/protocol/deploy";
 import { formatApp } from "./formatters/app.js";
 import { prisma } from "./prisma.js";
-import { stripAppPrefixes } from "./id.js";
+import { stripAppPrefixes, stripIdPrefix } from "./id.js";
 
 export async function findAppByIdOrName(
   identifier: string,
   stripPrefixes?: boolean,
 ) {
+  const cleanId = stripIdPrefix(identifier);
   const app = await prisma.app.findFirst({
     where: {
-      OR: [{ id: identifier }, { name: identifier }],
+      OR: [
+        { id: identifier },
+        { name: identifier },
+        ...(cleanId !== identifier ? [{ id: cleanId }] : []),
+      ],
     },
     include: {
       domains: true,
@@ -55,7 +60,7 @@ export async function findDeployment(id: string) {
 
   return {
     ...deployment,
-    app: formatApp(deployment.app, { showAll: true }),
+    app: stripAppPrefixes(formatApp(deployment.app, { showAll: true })),
   };
 }
 

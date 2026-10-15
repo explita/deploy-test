@@ -8,6 +8,7 @@ import * as tar from "tar";
 import { prisma } from "../../lib/prisma.js";
 import { stream } from "../../lib/runner.js";
 import { formatApp, FormattedApp } from "../../lib/formatters/app.js";
+import { stripAppPrefixes } from "../../lib/id.js";
 import { server, postgres, mariadb } from "../../lib/constants.js";
 import {
   logger,
@@ -313,7 +314,9 @@ export async function dumpAllApps(
     await mkdir(appsBaseDir, { recursive: true });
 
     const formattedApps = apps.map((app) =>
-      formatApp(app, { showAll: options.revealSecrets }),
+      stripAppPrefixes(
+        formatApp(app, { showAll: options.revealSecrets }),
+      ),
     );
 
     for (const app of formattedApps) {

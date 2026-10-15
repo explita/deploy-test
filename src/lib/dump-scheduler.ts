@@ -2,6 +2,7 @@ import { prisma } from "./prisma.js";
 import { matchesCron, DumpManifest } from "@explita/protocol/deploy";
 import { logger } from "@explita/protocol";
 import { formatApp, FormattedApp } from "./formatters/app.js";
+import { stripAppPrefixes } from "./id.js";
 import { stageAppDump } from "../services/dump/dump.js";
 import {
   uploadDumpToS3,
@@ -57,7 +58,9 @@ class DumpScheduler {
         },
       });
 
-      const formattedApps = apps.map((app) => formatApp(app));
+      const formattedApps = apps.map((app) =>
+        stripAppPrefixes(formatApp(app)),
+      );
       const now = new Date();
 
       for (const app of formattedApps) {
