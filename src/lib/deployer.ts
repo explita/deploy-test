@@ -27,6 +27,7 @@ import {
 } from "@explita/protocol/deploy";
 import { logger } from "@explita/protocol";
 import { findDeployment } from "./app-helpers.js";
+import { stripAppPrefixes } from "./id.js";
 import {
   cloneDatabaseForPreview,
   dropPreviewDatabase,
@@ -374,6 +375,34 @@ export class Deployer {
         return;
       }
 
+      // If tunnel is requested, establish and verify tunnel sidecar on containerName before switching production traffic
+      let tunnelUrl: string | null = null;
+      const isTunnelRequested =
+        state.tunnelPreference === true ||
+        (state.tunnelPreference !== false &&
+          (app.metadata.tunnel?.enabled === true ||
+            app.metadata.tunnelEnabled === true));
+
+      if (isTunnelRequested) {
+        await stateLog("Establishing automated public HTTPS tunnel...");
+        try {
+          tunnelUrl = await syncAppTunnel(app, containerName);
+          if (tunnelUrl) {
+            await stateLog(`Public tunnel available at: ${tunnelUrl}`);
+          }
+        } catch (tunnelErr: any) {
+          const hasCustomDomains = app.domains && app.domains.length > 0;
+
+          if (!hasCustomDomains || state.tunnelPreference === true) {
+            throw tunnelErr;
+          }
+
+          await stateLog(
+            `[tunnel] Warning: Automated tunnel failed (${tunnelErr.message}). Accessible via configured custom domain(s).`,
+          );
+        }
+      }
+
       await this.switchTraffic(
         app,
         deploymentId,
@@ -381,6 +410,7 @@ export class Deployer {
         detectedPort,
         previousContainer,
         stateLog,
+        tunnelUrl,
       );
       await updateStatus("LIVE", { finishedAt: new Date() });
     } catch (error) {
@@ -711,13 +741,15 @@ export class Deployer {
   }
 
   private async switchTraffic(
-    app: FormattedApp,
+    rawApp: FormattedApp,
     deploymentId: string,
     containerName: string,
     detectedPort: number | undefined,
     previousContainer: string | undefined,
     stateLog: (line: string) => Promise<void>,
+    tunnelUrl?: string | null,
   ) {
+    const app = stripAppPrefixes(rawApp);
     const liveAppRecord = await prisma.app.update({
       where: { id: app.id },
       data: {
@@ -732,18 +764,21 @@ export class Deployer {
       stateLog(`[caddy] Warning: Failed to sync domains: ${err}`);
     });
 
-    const tunnelUrl = await syncAppTunnel(liveApp).catch((err) => {
-      stateLog(`[tunnel] Warning: Failed to sync tunnel: ${err}`);
-      return null;
-    });
+    const finalTunnelUrl =
+      tunnelUrl !== undefined
+        ? tunnelUrl
+        : await syncAppTunnel(liveApp, containerName).catch((err) => {
+            stateLog(`[tunnel] Warning: Failed to sync tunnel: ${err}`);
+            return null;
+          });
 
     await cronScheduler.syncApp(app.id).catch((err) => {
       stateLog(`[cron] Warning: Failed to sync scheduled jobs: ${err}`);
     });
 
     await stateLog("Deployment is live");
-    if (tunnelUrl) {
-      await stateLog(`Public tunnel available at: ${tunnelUrl}`);
+    if (finalTunnelUrl) {
+      await stateLog(`Public tunnel available at: ${finalTunnelUrl}`);
     }
 
     // Decommission previous container only after new deployment is live and serving traffic
@@ -762,7 +797,7 @@ export class Deployer {
     const domains =
       liveAppRecord.domains?.map((d) => `https://${d.hostname}`) || [];
     return {
-      tunnelUrl: tunnelUrl || undefined,
+      tunnelUrl: finalTunnelUrl || undefined,
       domains,
     };
   }
@@ -1382,6 +1417,174 @@ export class Deployer {
     }
 
     return true;
+  }
+
+  async recreateAppContainer(
+    rawApp: FormattedApp,
+    logFn?: (line: string) => Promise<void>,
+  ): Promise<{ containerName: string; detectedPort?: number }> {
+    const app = stripAppPrefixes(rawApp);
+    if (this.running.has(app.id)) {
+      throw new Error(
+        "A deployment or container operation is already running for this app",
+      );
+    }
+    this.running.add(app.id);
+
+    const deployment = app.currentDeployment;
+    if (!deployment || !deployment.image) {
+      this.running.delete(app.id);
+      throw new Error("Application has no active deployment to reload");
+    }
+
+    const stateLog = async (line: string) => {
+      logger.info(`[deployer:recreate] ${line}`);
+      if (logFn) {
+        await logFn(line).catch(() => {});
+      }
+    };
+
+    const deploymentId = deployment.id;
+    const safeAppId = `app-${app.id.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+    const safeDeployId = `d-${deploymentId.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+    const newContainerName = `explita-${safeAppId}-${safeDeployId}-${Date.now().toString(36)}`;
+    const previousContainer = deployment.containerName;
+    let trafficSwitched = false;
+
+    try {
+      await stateLog(
+        `Applying environment variables to ${app.name} (${app.id}) using existing image ${deployment.image}...`,
+      );
+
+      // Pre-cleanup any stale/dangling reload containers that leaked from previous attempts
+      try {
+        const stale = await run("docker", [
+          "ps",
+          "-a",
+          "--filter",
+          `name=explita-${safeAppId}-${safeDeployId}-`,
+          "--format",
+          "{{.Names}}",
+        ]);
+        if (stale.code === 0 && stale.stdout) {
+          const names = stale.stdout
+            .split("\n")
+            .map((n) => n.trim())
+            .filter(Boolean);
+          for (const name of names) {
+            if (name !== previousContainer && name !== newContainerName) {
+              await run("docker", ["rm", "-f", name]).catch(() => {});
+            }
+          }
+        }
+      } catch {}
+
+      // 1. Run new container with updated environment variables from existing image
+      let detectedPort: number | undefined;
+      try {
+        detectedPort = await this.runContainer(
+          newContainerName,
+          deployment.image,
+          app,
+          stateLog,
+        );
+      } catch (err: any) {
+        await stateLog(`Failed to start container: ${err.message}`);
+        throw err;
+      }
+
+      // 2. Process liveness check
+      try {
+        await this.waitForLiveness(newContainerName, stateLog);
+      } catch (err: any) {
+        throw new Error(`Process liveness check failed: ${err.message}`);
+      }
+
+      // 3. HTTP health check (if configured)
+      const appPort = detectedPort || app.port;
+      const healthCheckPath =
+        app.metadata.healthCheck !== undefined
+          ? app.metadata.healthCheck
+          : appPort
+            ? "/"
+            : null;
+
+      if (healthCheckPath && appPort) {
+        try {
+          await this.waitForHttpHealthCheck(
+            newContainerName,
+            appPort,
+            healthCheckPath,
+            stateLog,
+          );
+        } catch (err: any) {
+          throw new Error(`HTTP health check failed: ${err.message}`);
+        }
+      }
+
+      // 4. Update deployment record to point to new container before switching traffic
+      await prisma.deployment.update({
+        where: { id: deploymentId },
+        data: { containerName: newContainerName },
+      });
+      trafficSwitched = true;
+
+      // 5. Zero-downtime traffic switch & cleanup of old container
+      await this.switchTraffic(
+        app,
+        deploymentId,
+        newContainerName,
+        detectedPort,
+        previousContainer || undefined,
+        stateLog,
+      );
+
+      await stateLog(
+        `Environment variables successfully applied. Running container: ${newContainerName}`,
+      );
+
+      return { containerName: newContainerName, detectedPort };
+    } catch (err: any) {
+      await stateLog(
+        `Rollback triggered during container reload: ${err.message}`,
+      );
+
+      // Ensure failed new container is removed immediately so containers don't pile up
+      if (newContainerName) {
+        await stateLog(
+          `Rollback: cleaning up failed container ${newContainerName}...`,
+        );
+        await run("docker", ["stop", "-t", "2", newContainerName]).catch(
+          () => {},
+        );
+        await run("docker", ["rm", "-f", newContainerName]).catch(() => {});
+      }
+
+      // If traffic was switched before the failure, restore Caddy / tunnel back to previous container
+      if (trafficSwitched && previousContainer) {
+        await stateLog(
+          `Rollback: restoring traffic route to previous container ${previousContainer}...`,
+        );
+        await prisma.deployment
+          .update({
+            where: { id: deploymentId },
+            data: { containerName: previousContainer },
+          })
+          .catch(() => {});
+
+        await syncAppCaddy(app.id).catch(() => {});
+        await syncAppTunnel(app).catch(() => {});
+        await cronScheduler.syncApp(app.id).catch(() => {});
+      } else if (previousContainer) {
+        await stateLog(
+          `Rollback complete: previous container remains healthy and active (${previousContainer})`,
+        );
+      }
+
+      throw err;
+    } finally {
+      this.running.delete(app.id);
+    }
   }
 }
 

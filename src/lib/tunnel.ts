@@ -51,9 +51,38 @@ export async function ensureTunnelImage(): Promise<boolean> {
   return false;
 }
 
+export function extractTunnelError(cleanOutput: string): string | null {
+  if (/already in use by an active session/i.test(cleanOutput)) {
+    const match = cleanOutput.match(/Subdomain "([^"]+)" is already in use/i);
+    const sub = match ? `Subdomain "${match[1]}"` : "Subdomain";
+    return `${sub} is already in use by an active session. Choose a different subdomain with -s / --subdomain, or stop the conflicting tunnel session.`;
+  }
+  if (
+    /Invalid tunnel token|Token.*invalid|Unauthorized|Forbidden/i.test(
+      cleanOutput,
+    )
+  ) {
+    return "Invalid or unauthorized tunnel token. Check TUNNEL_TOKEN in your .env configuration.";
+  }
+  if (/Unable to connect to the tunnel service/i.test(cleanOutput)) {
+    return "Unable to connect to the tunnel service. Please verify network connectivity or TUNNEL_SERVER_URL.";
+  }
+  if (/Failed to connect:/i.test(cleanOutput)) {
+    const lines = cleanOutput
+      .split("\n")
+      .map((l) => l.trim().replace(/^[-*•]\s*/, ""))
+      .filter((l) => l.length > 0 && !l.startsWith("Failed to connect:"));
+    if (lines.length > 0) {
+      return lines.slice(0, 2).join(". ");
+    }
+    return "Tunnel connection to server failed";
+  }
+  return null;
+}
+
 /**
  * Extracts the verified public tunnel URL by polling the container logs.
- * Falls back to the constructed URL if logs cannot be parsed or on timeout.
+ * Throws a descriptive error if the container crashes or connection fails.
  */
 async function resolveTunnelUrlFromContainer(
   containerName: string,
@@ -67,7 +96,7 @@ async function resolveTunnelUrlFromContainer(
     const res = await run("docker", [
       "logs",
       "--tail",
-      "30",
+      "50",
       containerName,
     ]).catch(() => ({ code: 1, stdout: "", stderr: "" }));
 
@@ -78,28 +107,63 @@ async function resolveTunnelUrlFromContainer(
       return match[1].trim();
     }
 
-    // Stop early if container crashed
+    // Check for explicit tunnel connection failure messages
+    const explicitErr = extractTunnelError(cleanOutput);
+    if (explicitErr) {
+      await run("docker", ["rm", "-f", containerName]).catch(() => null);
+      throw new Error(explicitErr);
+    }
+
+    // Stop early if container crashed/exited
     const inspectRes = await run("docker", [
       "inspect",
       "--format",
-      "{{.State.Running}}",
+      "{{.State.Running}} {{.State.ExitCode}}",
       containerName,
     ]).catch(() => ({ code: 1, stdout: "", stderr: "" }));
 
-    if (inspectRes.code === 0 && inspectRes.stdout.trim() === "false") {
-      logger.warn(
-        `Tunnel container ${containerName} exited: ${cleanOutput.trim()}`,
-      );
-      break;
+    if (inspectRes.code === 0) {
+      const [running, exitCodeStr] = inspectRes.stdout.trim().split(" ");
+      if (running === "false") {
+        await run("docker", ["rm", "-f", containerName]).catch(() => null);
+        const exitCode = Number(exitCodeStr || "1");
+        const errDetail =
+          extractTunnelError(cleanOutput) ||
+          cleanOutput.trim().split("\n").filter(Boolean).slice(-2).join(" ") ||
+          `container exited with code ${exitCode}`;
+        throw new Error(`Tunnel failed: ${errDetail}`);
+      }
     }
 
     await new Promise((resolve) => setTimeout(resolve, 300));
   }
 
-  return fallbackUrl;
+  // If timeout expired without receiving a public URL or clean connection
+  const timeoutLogs = await run("docker", [
+    "logs",
+    "--tail",
+    "20",
+    containerName,
+  ]).catch(() => ({ code: 1, stdout: "", stderr: "" }));
+  const finalClean = `${timeoutLogs.stdout}\n${timeoutLogs.stderr}`.replace(
+    /\u001b\[[0-9;]*[a-zA-Z]/g,
+    "",
+  );
+  const finalErr = extractTunnelError(finalClean);
+  await run("docker", ["rm", "-f", containerName]).catch(() => null);
+  if (finalErr) {
+    throw new Error(finalErr);
+  }
+
+  throw new Error(
+    `Tunnel timed out: tunnel container did not establish connection within ${timeoutMs / 1000}s`,
+  );
 }
 
-export async function syncAppTunnel(app: FormattedApp): Promise<string | null> {
+export async function syncAppTunnel(
+  app: FormattedApp,
+  targetContainerName?: string,
+): Promise<string | null> {
   if (!tunnel.enabled) {
     await removeAppTunnel(app);
     return null;
@@ -119,29 +183,35 @@ export async function syncAppTunnel(app: FormattedApp): Promise<string | null> {
   const rawAppId = stripIdPrefix(app.id);
   const rawDepId = stripIdPrefix(app.currentDeploymentId || "");
 
-  const activeDeployment = app.currentDeployment
-    ? app.currentDeployment
-    : rawDepId
-      ? await prisma.deployment.findUnique({
-          where: { id: rawDepId },
-        })
-      : await prisma.deployment.findFirst({
-          where: { appId: rawAppId, status: { in: ["LIVE", "HEALTH_CHECK"] } },
-          orderBy: { startedAt: "desc" },
-        });
+  const activeDeployment = targetContainerName
+    ? null
+    : app.currentDeployment
+      ? app.currentDeployment
+      : rawDepId
+        ? await prisma.deployment.findUnique({
+            where: { id: rawDepId },
+          })
+        : await prisma.deployment.findFirst({
+            where: { appId: rawAppId, status: { in: ["LIVE", "HEALTH_CHECK"] } },
+            orderBy: { startedAt: "desc" },
+          });
 
-  if (!isMaintenance && !activeDeployment?.containerName) {
+  const targetHost = isMaintenance
+    ? caddy.containerName
+    : targetContainerName || activeDeployment?.containerName;
+
+  if (!targetHost) {
     await removeAppTunnel(app);
     return null;
   }
 
   // Ensure target container is currently running if not in maintenance
-  if (!isMaintenance && activeDeployment?.containerName) {
+  if (!isMaintenance && targetHost) {
     const inspect = await run("docker", [
       "inspect",
       "--format",
       "{{.State.Running}}",
-      activeDeployment.containerName,
+      targetHost,
     ]).catch(() => ({ code: 1, stdout: "", stderr: "" }));
 
     if (inspect.code !== 0 || inspect.stdout.trim() !== "true") {
@@ -171,9 +241,6 @@ export async function syncAppTunnel(app: FormattedApp): Promise<string | null> {
 
   const tunnelContainerName = getAppTunnelContainerName(rawAppId);
   const subdomain = getAppTunnelSubdomain(app);
-  const targetHost = isMaintenance
-    ? caddy.containerName
-    : activeDeployment!.containerName!;
   const targetPort = isMaintenance ? 80 : app.port || DEFAULT_CONTAINER_PORT;
 
   // Remove existing tunnel container to rebind to new live container target
@@ -217,27 +284,31 @@ export async function syncAppTunnel(app: FormattedApp): Promise<string | null> {
     const errMsg = `Failed to spawn tunnel container ${tunnelContainerName}: ${spawnRes.stderr || spawnRes.stdout}`;
     logger.warn(`${errMsg}`);
     await removeAppTunnel(app);
-    return null;
+    throw new Error(errMsg);
   }
 
   const fallbackUrl = `https://${subdomain}.${tunnel.domain}`;
-  const tunnelUrl = await resolveTunnelUrlFromContainer(
-    tunnelContainerName,
-    fallbackUrl,
-  );
+  try {
+    const tunnelUrl = await resolveTunnelUrlFromContainer(
+      tunnelContainerName,
+      fallbackUrl,
+    );
 
-  meta.tunnel = { enabled: true, url: tunnelUrl, subdomain: subdomain };
-  // Persist tunnel URL in App metadata for fast lookups
-  await prisma.app.update({
-    where: { id: rawAppId },
-    data: {
-      metadata: meta as InputJsonValue,
-    },
-  });
+    meta.tunnel = { enabled: true, url: tunnelUrl, subdomain: subdomain };
+    // Persist tunnel URL in App metadata for fast lookups
+    await prisma.app.update({
+      where: { id: rawAppId },
+      data: {
+        metadata: meta as InputJsonValue,
+      },
+    });
 
-  logger.info(`Tunnel active for ${app.name}: ${tunnelUrl}`);
-
-  return tunnelUrl;
+    logger.info(`Tunnel active for ${app.name}: ${tunnelUrl}`);
+    return tunnelUrl;
+  } catch (err) {
+    await removeAppTunnel(app);
+    throw err;
+  }
 }
 
 export async function removeAppTunnel(app: FormattedApp): Promise<void> {
@@ -351,12 +422,16 @@ export async function syncPreviewTunnel(
     return null;
   }
 
-  const verifiedPreviewUrl = await resolveTunnelUrlFromContainer(
-    previewTunnelContainerName,
-    previewUrl,
-  );
-
-  return verifiedPreviewUrl;
+  try {
+    const verifiedPreviewUrl = await resolveTunnelUrlFromContainer(
+      previewTunnelContainerName,
+      previewUrl,
+    );
+    return verifiedPreviewUrl;
+  } catch (err) {
+    await removePreviewTunnel(deploymentId);
+    throw err;
+  }
 }
 
 export async function removePreviewTunnel(deploymentId: string): Promise<void> {

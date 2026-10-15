@@ -1,21 +1,32 @@
 import z from "zod";
-import { normalizeVolumes, normalizeNotificationConfig } from "@explita/protocol";
+import {
+  normalizeVolumes,
+  normalizeNotificationConfig,
+} from "@explita/protocol";
 
-export const notifySchema = z.preprocess((val) => {
-  if (val === null) return null;
-  return normalizeNotificationConfig(val);
-}, z.object({
-  discord: z.string().optional(),
-  slack: z.string().optional(),
-  telegram: z.union([
-    z.string(),
-    z.object({
-      chatId: z.string(),
-      token: z.string().optional(),
-    }),
-  ]).optional(),
-  events: z.array(z.string()).optional(),
-}).nullable().optional());
+export const notifySchema = z.preprocess(
+  (val) => {
+    if (val === null) return null;
+    return normalizeNotificationConfig(val);
+  },
+  z
+    .object({
+      discord: z.string().optional(),
+      slack: z.string().optional(),
+      telegram: z
+        .union([
+          z.string(),
+          z.object({
+            chatId: z.string(),
+            token: z.string().optional(),
+          }),
+        ])
+        .optional(),
+      events: z.array(z.string()).optional(),
+    })
+    .nullable()
+    .optional(),
+);
 
 const volumesSchema = z.preprocess((val) => {
   return normalizeVolumes(val);
@@ -77,11 +88,13 @@ export const createAppSchema = z.object({
   domains: z.array(z.string()).default([]),
   tunnel: z.boolean().optional(),
   tunnelEnabled: z.boolean().optional(),
+  subdomain: z.string().min(1).max(63).optional(),
   preDeploy: preDeploySchema.default([]),
   healthCheck: healthCheckSchema.default("/"),
   crons: z.array(cronJobSchema).optional().default([]),
   volumes: volumesSchema,
   notify: notifySchema,
+  env: z.record(z.string().min(1), z.string()).optional(),
 });
 
 export type CreateAppInput = z.infer<typeof createAppSchema>;
@@ -91,6 +104,7 @@ export const updateAppSchema = z.object({
   port: z.number().int().positive().optional(),
   tunnel: z.boolean().optional(),
   tunnelEnabled: z.boolean().optional(),
+  subdomain: z.string().min(1).max(63).nullable().optional(),
   memory: z.string().nullable().optional(),
   cpus: z.union([z.string(), z.number()]).nullable().optional(),
   preDeploy: preDeploySchema,
@@ -98,4 +112,5 @@ export const updateAppSchema = z.object({
   crons: z.array(cronJobSchema).optional(),
   volumes: volumesSchema,
   notify: notifySchema,
+  env: z.record(z.string().min(1), z.string()).optional(),
 });

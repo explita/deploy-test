@@ -2,7 +2,11 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { removeAppTunnel, syncAppTunnel } from "../../lib/tunnel.js";
 import { updateAppSchema } from "../../zod/app-schema.js";
-import { normalizeMemoryLimit, normalizeCpuLimit } from "@explita/protocol";
+import {
+  normalizeMemoryLimit,
+  normalizeCpuLimit,
+  encryptEnvMap,
+} from "@explita/protocol";
 import { run } from "../../lib/runner.js";
 import { cronScheduler } from "../../lib/cron-scheduler.js";
 import { formatApp } from "../../lib/formatters/app.js";
@@ -17,6 +21,19 @@ export async function updateApp(request: FastifyRequest, reply: FastifyReply) {
   const tunnelPref = input.tunnel ?? input.tunnelEnabled;
   if (tunnelPref !== undefined) {
     meta.tunnelEnabled = tunnelPref;
+    if (!meta.tunnel) meta.tunnel = { enabled: tunnelPref };
+    meta.tunnel.enabled = tunnelPref;
+  }
+
+  if (input.subdomain !== undefined) {
+    if (!meta.tunnel) {
+      meta.tunnel = { enabled: meta.tunnelEnabled ?? false };
+    }
+    if (input.subdomain) {
+      meta.tunnel.subdomain = input.subdomain.trim().toLowerCase();
+    } else {
+      delete meta.tunnel.subdomain;
+    }
   }
 
   if (input.memory !== undefined) {
@@ -45,6 +62,27 @@ export async function updateApp(request: FastifyRequest, reply: FastifyReply) {
 
   if (input.healthCheck !== undefined) {
     meta.healthCheck = input.healthCheck;
+  }
+
+  if (input.env && Object.keys(input.env).length > 0) {
+    const encryptedNew = encryptEnvMap(input.env);
+    await prisma.$transaction(
+      Object.entries(encryptedNew).map(([key, value]) =>
+        prisma.appEnv.upsert({
+          where: {
+            appId_key: { appId: app.id, key },
+          },
+          create: {
+            appId: app.id,
+            key,
+            value,
+          },
+          update: {
+            value,
+          },
+        }),
+      ),
+    );
   }
 
   if (input.crons !== undefined) {

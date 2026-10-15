@@ -176,7 +176,7 @@ importers:
         specifier: ^0.2.0
         version: 0.2.0
       '@explita/protocol':
-        specifier: file:./explita-protocol-0.1.0.tgz
+        specifier: file:explita-protocol-0.1.0.tgz
         version: file:explita-protocol-0.1.0.tgz
       '@fastify/cors':
         specifier: ^10.0.2
@@ -473,7 +473,7 @@ packages:
     engines: {node: '>=14.0.0'}
 
   '@explita/protocol@file:explita-protocol-0.1.0.tgz':
-    resolution: {integrity: sha512-WeYtiFd/6K0yYP/9U270r64XJrw/cbJ2pqaFljz6oi3Ww0OHh0r05ppIfJ5ZskHaqNwadI6tqwZ+G6Ax0I95DA==, tarball: file:explita-protocol-0.1.0.tgz}
+    resolution: {integrity: sha512-yLEGcpCQRl8OrjBvr97Qm8aoJxReKg9dm+i1Ag+Q4PKLFREIhhsE1b1Ei26lJlxVQ1+wDk12zMwwDf/JwWUpfg==, tarball: file:explita-protocol-0.1.0.tgz}
     version: 0.1.0
 
   '@fastify/ajv-compiler@4.0.6':

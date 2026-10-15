@@ -2,6 +2,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { createAppSchema } from "../../zod/app-schema.js";
 import { prisma } from "../../lib/prisma.js";
 import { formatApp } from "../../lib/formatters/app.js";
+import { encryptEnvMap } from "@explita/protocol";
 
 export async function createApp(request: FastifyRequest, reply: FastifyReply) {
   const input = createAppSchema.parse(request.body);
@@ -30,6 +31,11 @@ export async function createApp(request: FastifyRequest, reply: FastifyReply) {
     .filter(Boolean);
 
   const tunnelEnabled = input.tunnel ?? input.tunnelEnabled ?? false;
+  const tunnelSubdomain = input.subdomain?.trim().toLowerCase();
+  const encryptedEnvs =
+    input.env && Object.keys(input.env).length > 0
+      ? encryptEnvMap(input.env)
+      : null;
 
   const createdApp = await prisma.app.create({
     data: {
@@ -37,6 +43,10 @@ export async function createApp(request: FastifyRequest, reply: FastifyReply) {
       port: input.port,
       metadata: {
         tunnelEnabled,
+        tunnel: {
+          enabled: tunnelEnabled,
+          ...(tunnelSubdomain ? { subdomain: tunnelSubdomain } : {}),
+        },
         preDeploy: input.preDeploy,
         healthCheck: input.healthCheck,
         volumes: input.volumes,
@@ -54,6 +64,14 @@ export async function createApp(request: FastifyRequest, reply: FastifyReply) {
           paused: c.paused ?? false,
         })),
       },
+      envs: encryptedEnvs
+        ? {
+            create: Object.entries(encryptedEnvs).map(([key, value]) => ({
+              key,
+              value,
+            })),
+          }
+        : undefined,
     },
     include: {
       domains: true,

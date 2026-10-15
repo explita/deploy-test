@@ -1,3 +1,5 @@
+import { FormattedApp } from "./formatters/app.js";
+
 const PREFIXES = ["app_", "dep_", "db_", "cron_", "dom_"] as const;
 
 /**
@@ -44,4 +46,20 @@ export function formatDatabaseId(rawId: string): string {
   if (!rawId) return rawId;
   const clean = rawId.slice(-10);
   return `db_${clean}`;
+}
+
+export function stripAppPrefixes(app: FormattedApp) {
+  return {
+    ...app,
+    id: stripIdPrefix(app.id),
+    currentDeploymentId: app.currentDeploymentId
+      ? stripIdPrefix(app.currentDeploymentId)
+      : null,
+    currentDeployment: app.currentDeployment
+      ? {
+          ...app.currentDeployment,
+          id: stripIdPrefix(app.currentDeployment.id),
+        }
+      : null,
+  };
 }

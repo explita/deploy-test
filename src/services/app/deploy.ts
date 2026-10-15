@@ -16,18 +16,33 @@ export async function deployApp(request: FastifyRequest, reply: FastifyReply) {
 
   const query = request.query as Record<string, string> | undefined;
 
-  if (query?.tunnel !== undefined) {
-    const isTunnelWanted = query.tunnel !== "false";
+  if (query?.tunnel !== undefined || query?.subdomain !== undefined) {
+    const isTunnelWanted =
+      query?.tunnel !== undefined
+        ? query.tunnel !== "false" && query.tunnel !== "0"
+        : Boolean(app.metadata?.tunnel?.enabled ?? app.metadata?.tunnelEnabled);
+    const sub = query?.subdomain
+      ? String(query.subdomain).trim().toLowerCase()
+      : undefined;
     const existingMeta = app.metadata;
+    const updatedMeta = {
+      ...existingMeta,
+      tunnelEnabled: isTunnelWanted,
+      tunnel: {
+        ...(existingMeta.tunnel || {}),
+        enabled: isTunnelWanted,
+        ...(sub ? { subdomain: sub } : {}),
+      },
+    };
     await prisma.app.update({
       where: { id: app.id },
       data: {
-        metadata: {
-          ...existingMeta,
-          tunnelEnabled: isTunnelWanted,
-        } as any,
+        metadata: updatedMeta as any,
       },
     });
+
+    app.metadata = updatedMeta;
+
     if (!isTunnelWanted) {
       await removeAppTunnel(app);
     }

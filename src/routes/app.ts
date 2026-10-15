@@ -40,6 +40,7 @@ import {
 import { getEnv } from "../services/env/get.js";
 import { setEnv } from "../services/env/set.js";
 import { deleteEnv } from "../services/env/delete.js";
+import { applyEnv } from "../services/env/apply.js";
 import { createRedis } from "../services/redis/create.js";
 import { getRedis } from "../services/redis/get.js";
 import { deleteRedis } from "../services/redis/delete.js";
@@ -128,6 +129,7 @@ export function appRoutesWithId(app: FastifyInstance) {
   app.get("/:id/env", getEnv);
   app.post("/:id/env", setEnv);
   app.delete("/:id/env", deleteEnv);
+  app.post("/:id/env/apply", applyEnv);
 
   // Runtime logs route (supports both HTTP snapshot and WebSocket live streaming)
   app.route({

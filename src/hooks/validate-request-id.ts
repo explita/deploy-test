@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { findAppByIdOrName } from "../lib/app-helpers.js";
-import { stripIdPrefix } from "../lib/id.js";
+import { stripAppPrefixes } from "../lib/id.js";
 
 export async function validateRequestId(
   request: FastifyRequest,
@@ -24,18 +24,6 @@ export async function validateRequestId(
   }
 
   request.ctx = {
-    app: {
-      ...app,
-      id: stripIdPrefix(app.id),
-      currentDeploymentId: app.currentDeploymentId
-        ? stripIdPrefix(app.currentDeploymentId)
-        : null,
-      currentDeployment: app.currentDeployment
-        ? {
-            ...app.currentDeployment,
-            id: stripIdPrefix(app.currentDeployment.id),
-          }
-        : null,
-    },
+    app: stripAppPrefixes(app),
   };
 }

@@ -1,12 +1,11 @@
 import z from "zod";
 
 export const setEnvSchema = z.object({
-  env: z.record(
-    z.string().min(1),
-    z.string(),
-  ),
+  env: z.record(z.string().min(1), z.string()),
+  apply: z.boolean().optional(),
 });
 
 export const deleteEnvSchema = z.object({
   keys: z.array(z.string().min(1)).min(1),
+  apply: z.boolean().optional(),
 });

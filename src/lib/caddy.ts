@@ -46,7 +46,7 @@ export async function syncServerCaddy(): Promise<void> {
   }
 }
 
-export async function ensureCaddy(): Promise<void> {
+export async function ensureCaddy(isInit?: boolean): Promise<void> {
   await mkdir(caddy.appsDir, { recursive: true });
   await mkdir(caddy.dataDir, { recursive: true });
   await mkdir(backup.maintenanceDir, { recursive: true });
@@ -78,7 +78,9 @@ import /etc/caddy/apps/*.caddy
     ]).catch(() => ({ code: 1, stdout: "", stderr: "" }));
 
     if (mountInspect.stdout.includes("/var/www/custom")) {
-      logger.always(`Container ${caddy.containerName} is running.`);
+      if (isInit) {
+        logger.always(`Container ${caddy.containerName} is running.`);
+      }
       await syncServerCaddy();
       return;
     }

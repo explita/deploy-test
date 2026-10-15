@@ -26,7 +26,7 @@ export async function init() {
     // ]);
     await ensureDatabase();
     await ensureRedis();
-    await ensureCaddy();
+    await ensureCaddy(true);
     await ensureTunnelImage();
     await cronScheduler.start();
     await dbBackupScheduler.start();
