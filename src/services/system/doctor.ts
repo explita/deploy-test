@@ -4,6 +4,7 @@ import { statfs } from "node:fs/promises";
 import { run } from "../../lib/runner.js";
 import { caddy } from "../../lib/constants.js";
 import { SystemDiagnostics } from "@explita/protocol/deploy";
+import { DEPLOY_VERSION } from "../../version.js";
 
 export async function getSystemDoctor(
   _request: FastifyRequest,
@@ -101,6 +102,7 @@ export async function getSystemDoctor(
       arch: os.arch(),
       uptimeSeconds: Math.floor(os.uptime()),
       nodeVersion: process.version,
+      version: DEPLOY_VERSION,
     },
     docker: {
       available: dockerAvailable,

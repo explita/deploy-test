@@ -34,13 +34,23 @@ app.addContentTypeParser(
   },
 );
 
+import { DEPLOY_VERSION } from "./version.js";
+
 await app.register(cors);
 await app.register(websocket);
 
 app.addHook("onRequest", authHook);
 app.addHook("onRequest", normalizeIdPrefixesHook);
+app.addHook("onSend", async (_req, reply, payload) => {
+  reply.header("x-explita-version", DEPLOY_VERSION);
+  return payload;
+});
 
-app.get("/health", async () => ({ ok: true, service: "explita-deploy" }));
+app.get("/health", async () => ({
+  ok: true,
+  service: "explita-deploy",
+  version: DEPLOY_VERSION,
+}));
 
 // register routes
 app.register(appRoutes, { prefix: "/api/apps" });
