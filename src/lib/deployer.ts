@@ -608,6 +608,7 @@ export class Deployer {
     const detectedPort = await this.detectExposedPort(image);
 
     if (!app.port && detectedPort) {
+      app.port = detectedPort;
       await prisma.app
         .update({
           where: { id: app.id },
@@ -928,17 +929,57 @@ export class Deployer {
     const inspect = await run("docker", [
       "inspect",
       "--format",
-      "{{json .Config.ExposedPorts}}",
+      "{{json .Config}}",
       image,
     ]);
     if (inspect.code === 0 && inspect.stdout.trim()) {
       try {
-        const exposed = JSON.parse(inspect.stdout.trim());
-        if (exposed && typeof exposed === "object") {
-          const keys = Object.keys(exposed);
-          if (keys.length > 0) {
-            const match = keys[0].match(/^(\d+)/);
-            if (match) return Number(match[1]);
+        const config = JSON.parse(inspect.stdout.trim());
+        if (config && typeof config === "object") {
+          // 1. Check Env for PORT=(\d+) (e.g. Next.js ENV PORT 4000 or ENV PORT=4000)
+          if (Array.isArray(config.Env)) {
+            for (const env of config.Env) {
+              const match = String(env).match(/^PORT=(\d+)$/i);
+              if (match && match[1]) {
+                const port = Number(match[1]);
+                if (port > 0 && port <= 65535) return port;
+              }
+            }
+          }
+
+          // 2. Check Cmd or Entrypoint for -p <port> or --port <port>
+          const cmdArgs = [
+            ...(Array.isArray(config.Entrypoint) ? config.Entrypoint : []),
+            ...(Array.isArray(config.Cmd) ? config.Cmd : []),
+          ];
+          for (let i = 0; i < cmdArgs.length; i++) {
+            const arg = String(cmdArgs[i]);
+            if (arg === "-p" || arg === "--port") {
+              const nextArg = cmdArgs[i + 1];
+              if (nextArg) {
+                const parsed = parseInt(String(nextArg), 10);
+                if (!isNaN(parsed) && parsed > 0 && parsed <= 65535)
+                  return parsed;
+              }
+            }
+            const match = arg.match(/(?:-p|--port)[=\s](\d+)/i);
+            if (match && match[1]) {
+              const parsed = parseInt(match[1], 10);
+              if (!isNaN(parsed) && parsed > 0 && parsed <= 65535)
+                return parsed;
+            }
+          }
+
+          // 3. Check ExposedPorts
+          if (config.ExposedPorts && typeof config.ExposedPorts === "object") {
+            const keys = Object.keys(config.ExposedPorts);
+            if (keys.length > 0) {
+              const match = keys[0].match(/^(\d+)/);
+              if (match) {
+                const port = Number(match[1]);
+                if (port > 0 && port <= 65535) return port;
+              }
+            }
           }
         }
       } catch {

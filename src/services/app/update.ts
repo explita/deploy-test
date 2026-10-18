@@ -1,6 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { removeAppTunnel, syncAppTunnel } from "../../lib/tunnel.js";
+import { syncAppCaddy } from "../../lib/caddy.js";
 import { updateAppSchema } from "../../zod/app-schema.js";
 import {
   normalizeMemoryLimit,
@@ -156,10 +157,16 @@ export async function updateApp(request: FastifyRequest, reply: FastifyReply) {
   const updatedApp = formatApp(updated, { showAll: true });
 
   let tunnelUrl: string | null = null;
+  const isTunnelActive =
+    meta.tunnel?.enabled === true || meta.tunnelEnabled === true;
   if (tunnelPref === false) {
     await removeAppTunnel(updatedApp);
-  } else if (tunnelPref === true) {
+  } else if (tunnelPref === true || (input.port !== undefined && isTunnelActive)) {
     tunnelUrl = await syncAppTunnel(updatedApp);
+  }
+
+  if (input.port !== undefined) {
+    await syncAppCaddy(app.id).catch(() => {});
   }
 
   if (input.crons !== undefined) {
