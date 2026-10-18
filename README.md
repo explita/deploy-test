@@ -241,7 +241,7 @@ Whenever an app receives a new deployment or rollback, Caddy's upstream routes a
 
 ### Explita Tunnel (Automated Public URLs & Previews)
 
-In addition to custom domains, Explita Deploy integrates natively with **Explita Tunnel** (`@explita/tunnel`). For each active application, an isolated tunnel container (`explita-tunnel-<appId>`) runs on `explita-net` using `--restart unless-stopped`.
+In addition to custom domains, Explita Deploy integrates natively with **Explita Tunnel** (`@explita/cli`). For each active application, an isolated tunnel container (`explita-tunnel-<appId>`) runs on `explita-net` using `--restart unless-stopped`.
 
 - **No open ports needed**: App containers don't need public IP addresses or open inbound firewall ports.
 - **Stable public URL**: `https://<appName>.tunnel.explita.ng` (auto-routed over encrypted WebSockets).

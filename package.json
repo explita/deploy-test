@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1149.0",
-    "@explita/cache": "^0.2.0",
     "@explita/env-loader": "^0.2.0",
     "@explita/protocol": "file:explita-protocol-0.1.0.tgz",
     "@fastify/cors": "^10.0.2",

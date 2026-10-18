@@ -270,7 +270,7 @@ safe_save_tunnel_config() {
   # Reject duplicate definitions for managed keys before updating
   for key in TUNNEL_TOKEN TUNNEL_ENABLED; do
     local count
-    count=$(grep -c -E "^${key}=" "$ENV_FILE" 2>/dev/null || echo 0)
+    count=$(grep -c -E "^${key}=" "$ENV_FILE" 2>/dev/null || true)
     if [ "$count" -gt 1 ]; then
       log_error "Duplicate configuration key detected: '${key}' appears ${count} times in ${ENV_FILE}."
       log_error "Please remove duplicate entries in ${ENV_FILE} before updating."

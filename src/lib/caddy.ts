@@ -37,6 +37,7 @@ export async function syncServerCaddy(): Promise<void> {
     logger.info(
       `Server route active: https://${domain} -> host.docker.internal:${server.port}`,
     );
+    await reloadCaddy();
   } else {
     if (existsSync(filePath)) {
       await unlink(filePath).catch(() => null);

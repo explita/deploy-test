@@ -628,7 +628,7 @@ fi
 
 # Check and reject duplicate definitions for all managed keys
 for key in APP_ENCRYPTION_KEY DEPLOY_TOKEN POSTGRES_ROOT_PASSWORD PORT DATA_DIR HOST LOG_INFO MAX_REQUEST_BODY_SIZE IMAGE_RETENTION_LIMIT CRON_HISTORY_LIMIT REDIS_ENABLED TUNNEL_ENABLED TUNNEL_TOKEN; do
-  COUNT=$(grep -c -E "^${key}=" "$ENV_FILE" 2>/dev/null || echo 0)
+  COUNT=$(grep -c -E "^${key}=" "$ENV_FILE" 2>/dev/null || true)
   if [ "$COUNT" -gt 1 ]; then
     log_error "Duplicate configuration key detected: '${key}' appears ${COUNT} times in ${ENV_FILE}."
     log_error "Please remove duplicate entries in ${ENV_FILE} so runtime behavior is unambiguous."

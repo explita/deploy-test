@@ -169,9 +169,6 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.1149.0
         version: 3.1149.0
-      '@explita/cache':
-        specifier: ^0.2.0
-        version: 0.2.0(ioredis@5.11.1)
       '@explita/env-loader':
         specifier: ^0.2.0
         version: 0.2.0
@@ -463,11 +460,6 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@explita/cache@0.2.0':
-    resolution: {integrity: sha512-3lK/kJj/bPikQpR3mynWDqBCJaDpvporXIry8BD6IbecLoP2tV5pM0F9xmmpPeoXpQdissRu/3+nbn20+Nv9gA==}
-    peerDependencies:
-      ioredis: ^5
-
   '@explita/env-loader@0.2.0':
     resolution: {integrity: sha512-o6qrStJKDbYfh+wGo/il3vVWwFe15naa+LHqFezoj++tjV6PmO/XfHkesjH9hczt1OeTVSxrZnOAF201Jy9JbA==}
     engines: {node: '>=14.0.0'}
@@ -499,9 +491,6 @@ packages:
 
   '@fastify/websocket@11.3.3':
     resolution: {integrity: sha512-NBJoykKpFwrdX9Ezod1rt30p5NoPFu7vgeuUowSM3JVI5/hFNRPhetqkWMTiF/ifIzctwitbJut1gZ6FDg1mwQ==}
-
-  '@ioredis/commands@1.10.0':
-    resolution: {integrity: sha512-UmeW7z4LfctwoQ5wkhVzgq8tXkreED2xZGpX+Bg+zA+WJFZCT6c062AfCK/Dfk81xZnnwdhJCUMkitihRaoC2Q==}
 
   '@isaacs/fs-minipass@4.0.1':
     resolution: {integrity: sha512-wgm9Ehl2jpeqP3zw/7mo3kRHFp5MEDhqAdwy1fTGkHAwnkGOVsgpvQhL8B5n1qlb01jV3n/bI0ZfZp5lWA1k4w==}
@@ -934,10 +923,6 @@ packages:
   classnames@2.5.1:
     resolution: {integrity: sha512-saHYOzhIQs6wy2sVxTM6bUDsQO4F50V9RQ22qBpEdCW+I+/Wmke2HOl6lS6dTpdxVhb88/I6+Hs+438c3lfUow==}
 
-  cluster-key-slot@1.1.1:
-    resolution: {integrity: sha512-rwHwUfXL40Chm1r08yrhU3qpUvdVlgkKNeyeGPOxnW8/SyVDvgRaed/Uz54AqWNaTCAThlj6QAs3TZcKI0xDEw==}
-    engines: {node: '>=0.10.0'}
-
   confbox@0.2.4:
     resolution: {integrity: sha512-ysOGlgTFbN2/Y6Cg3Iye8YKulHw+R2fNXHrgSmXISQdMnomY6eNDprVdW9R5xBguEqI954+S6709UyiO7B+6OQ==}
 
@@ -1002,15 +987,6 @@ packages:
   d3-time@3.1.0:
     resolution: {integrity: sha512-VqKjzBLejbSMT4IgbmVgDjpkYrNWUYJnbCGo874u7MMKIWsILRX+OpX/gTk8MqjpT1A/c6HY2dCA77ZN0lkQ2Q==}
     engines: {node: '>=12'}
-
-  debug@4.4.3:
-    resolution: {integrity: sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==}
-    engines: {node: '>=6.0'}
-    peerDependencies:
-      supports-color: '*'
-    peerDependenciesMeta:
-      supports-color:
-        optional: true
 
   deepmerge-ts@7.1.5:
     resolution: {integrity: sha512-HOJkrhaYsweh+W+e74Yn7YStZOilkoPb6fycpwNLKzSPtruFs48nYis0zy5yJz1+ktUhHxoRDJ27RQAWLIJVJw==}
@@ -1150,10 +1126,6 @@ packages:
     resolution: {integrity: sha512-5Hh7Y1wQbvY5ooGgPbDaL5iYLAPzMTUrjMulskHLH6wnv/A+1q5rgEaiuqEjB+oxGXIVZs1FF+R/KPN3ZSQYYg==}
     engines: {node: '>=12'}
 
-  ioredis@5.11.1:
-    resolution: {integrity: sha512-ehuGcf94bQXhfagULNXrJdfnWO38v070jxSx/qE87Kjzmu2fU7ro5EFAb+OPituLqgfyuQaym5DlrNydW2sJ9A==}
-    engines: {node: '>=12.22.0'}
-
   ipaddr.js@2.5.0:
     resolution: {integrity: sha512-aq+t5NAc+cS6rZQQVWC2x98CPqGtKKTMDd4Gaodv0wShnItdKg/51djkGJ1hqH+Oy0ivDftCbSLCQob8zso01w==}
     engines: {node: '>= 10'}
@@ -1205,9 +1177,6 @@ packages:
 
   mnemonist@0.40.0:
     resolution: {integrity: sha512-kdd8AFNig2AD5Rkih7EPCXhu/iMvwevQFX/uEiGhZyPZi7fHqOoF4V4kHLpCfysxXMgQ4B52kdPMCwARshKvEg==}
-
-  ms@2.1.3:
-    resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
 
   mysql2@3.15.3:
     resolution: {integrity: sha512-FBrGau0IXmuqg4haEZRBfHNWB5mUARw6hNwPDXXGg0XzVJ50mr/9hb267lvpVMnhZ1FON3qNd4Xfcez1rbFwSg==}
@@ -1369,14 +1338,6 @@ packages:
   real-require@1.0.0:
     resolution: {integrity: sha512-P4nbQYQfePJxRSmY+v/KINxVucm4NF3p3s7pJveMTtom52FR4YGltUQLB8idDXwDDWW+eYrWDFbuzUnjoWHF7g==}
 
-  redis-errors@1.2.0:
-    resolution: {integrity: sha512-1qny3OExCf0UvUV/5wpYKf2YwPcOqXzkwKKSmKHiE6ZMQs5heeE/c8eXK+PNllPvmjgAbfnsbpkGZWy8cBpn9w==}
-    engines: {node: '>=4'}
-
-  redis-parser@3.0.0:
-    resolution: {integrity: sha512-DJnGAeenTdpMEH6uAJRK/uiyEIH9WVsUmoLwzudwGJUwZPp80PDBWPHXSAGNPwNvIXAbe7MSUB1zQFugFml66A==}
-    engines: {node: '>=4'}
-
   remeda@2.33.4:
     resolution: {integrity: sha512-ygHswjlc/opg2VrtiYvUOPLjxjtdKvjGz1/plDhkG66hjNjFr1xmfrs2ClNFo/E6TyUFiwYNh53bKV26oBoMGQ==}
 
@@ -1463,9 +1424,6 @@ packages:
   sqlstring@2.3.3:
     resolution: {integrity: sha512-qC9iz2FlN7DQl3+wjwn3802RTyjCx7sDvfQEXchwa6CWOx07/WVfh91gBmQ9fahw8snwGEWU3xGzOt4tFyHLxg==}
     engines: {node: '>= 0.6'}
-
-  standard-as-callback@2.1.0:
-    resolution: {integrity: sha512-qoRRSyROncaz1z0mvYqIE4lCd9p2R90i6GxW3uZv5ucSu8tU7B5HXUP1gG8pVZsYNVaXjk8ClXHPttLyxAL48A==}
 
   std-env@3.10.0:
     resolution: {integrity: sha512-5GS12FdOZNliM5mAOxFRg7Ir0pWz8MdpYm6AY6VPkGpbA7ZzmbzNcBJQ0GPvvyWgcY7QAhCgf9Uy89I03faLkg==}
@@ -1804,10 +1762,6 @@ snapshots:
   '@esbuild/win32-x64@0.28.2':
     optional: true
 
-  '@explita/cache@0.2.0(ioredis@5.11.1)':
-    dependencies:
-      ioredis: 5.11.1
-
   '@explita/env-loader@0.2.0':
     optionalDependencies:
       chokidar: 5.0.0
@@ -1850,8 +1804,6 @@ snapshots:
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
-
-  '@ioredis/commands@1.10.0': {}
 
   '@isaacs/fs-minipass@4.0.1':
     dependencies:
@@ -2298,8 +2250,6 @@ snapshots:
 
   classnames@2.5.1: {}
 
-  cluster-key-slot@1.1.1: {}
-
   confbox@0.2.4: {}
 
   confbox@0.3.1: {}
@@ -2359,10 +2309,6 @@ snapshots:
   d3-time@3.1.0:
     dependencies:
       d3-array: 3.2.4
-
-  debug@4.4.3:
-    dependencies:
-      ms: 2.1.3
 
   deepmerge-ts@7.1.5: {}
 
@@ -2532,18 +2478,6 @@ snapshots:
 
   internmap@2.0.3: {}
 
-  ioredis@5.11.1:
-    dependencies:
-      '@ioredis/commands': 1.10.0
-      cluster-key-slot: 1.1.1
-      debug: 4.4.3
-      denque: 2.1.0
-      redis-errors: 1.2.0
-      redis-parser: 3.0.0
-      standard-as-callback: 2.1.0
-    transitivePeerDependencies:
-      - supports-color
-
   ipaddr.js@2.5.0: {}
 
   is-property@1.0.2: {}
@@ -2585,8 +2519,6 @@ snapshots:
   mnemonist@0.40.0:
     dependencies:
       obliterator: 2.0.5
-
-  ms@2.1.3: {}
 
   mysql2@3.15.3:
     dependencies:
@@ -2755,12 +2687,6 @@ snapshots:
 
   real-require@1.0.0: {}
 
-  redis-errors@1.2.0: {}
-
-  redis-parser@3.0.0:
-    dependencies:
-      redis-errors: 1.2.0
-
   remeda@2.33.4: {}
 
   require-from-string@2.0.2: {}
@@ -2817,8 +2743,6 @@ snapshots:
   split2@4.2.0: {}
 
   sqlstring@2.3.3: {}
-
-  standard-as-callback@2.1.0: {}
 
   std-env@3.10.0: {}
 

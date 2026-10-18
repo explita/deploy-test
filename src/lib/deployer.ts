@@ -1,4 +1,5 @@
-import { rm } from "node:fs/promises";
+import { rm, rename } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { EventEmitter } from "node:events";
 import type {
@@ -479,6 +480,18 @@ export class Deployer {
     stateLog: (line: string) => Promise<void>,
     signal?: AbortSignal,
   ): Promise<void> {
+    const standardDockerfile = join(dir, "Dockerfile");
+    const lowerDockerfile = join(dir, "dockerfile");
+    if (!existsSync(standardDockerfile)) {
+      if (existsSync(lowerDockerfile)) {
+        await rename(lowerDockerfile, standardDockerfile).catch(() => {});
+      } else {
+        throw new Error(
+          "No Dockerfile found in deployment archive. Explita Deploy requires a Dockerfile in your project root to build and run your application.",
+        );
+      }
+    }
+
     await stateLog(`Building image ${image}`);
     const buildRes = await stream("docker", ["build", "-t", image, dir], {
       cwd: dir,
