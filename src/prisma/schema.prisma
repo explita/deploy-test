@@ -25,6 +25,7 @@ model App {
     redis          AppRedis?
     crons          AppCron[]
     envs           AppEnv[]
+    databaseBackups DatabaseBackup[]
 
     @@index([name])
     @@map("apps")
@@ -109,6 +110,7 @@ model AppRedis {
 model Deployment {
     id            String           @id @default(nanoid(10))
     appId         String           @map("app_id")
+    tag           String?
     image         String?
     containerName String?          @map("container_name")
     error         String?
@@ -122,6 +124,7 @@ model Deployment {
     currentFor App[] @relation(name: "AppToCurrentDeployment")
 
     @@index([appId])
+    @@index([appId, tag])
     @@map("deployments")
 }
 
@@ -156,6 +159,27 @@ model CronExecution {
 
     @@index([appId, createdAt(sort: Desc)])
     @@map("cron_executions")
+}
+
+model DatabaseBackup {
+    id            String   @id @default(nanoid(10))
+    appId         String   @map("app_id")
+    filename      String   @unique
+    key           String   @default("default")
+    dbName        String   @map("db_name")
+    sizeBytes     Float    @map("size_bytes")
+    sizeFormatted String   @map("size_formatted")
+    contentHash   String   @map("content_hash")
+    storage       String   @default("local") // "local" | "s3" | "both"
+    s3Url         String?  @map("s3_url")
+    createdAt     DateTime @default(now()) @map("created_at")
+
+    app App @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+    @@index([appId, key])
+    @@index([appId, contentHash])
+    @@index([appId, createdAt(sort: Desc)])
+    @@map("database_backups")
 }
 
 enum DeploymentStatus {

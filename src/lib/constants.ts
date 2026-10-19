@@ -8,6 +8,7 @@ import {
   DEFAULT_TUNNEL_IMAGE,
   parseSize,
   requireEnv,
+  normalizeTunnelServerUrl,
 } from "@explita/protocol";
 
 const parsedPort = Number(requireEnv("PORT"));
@@ -17,7 +18,10 @@ if (Number.isNaN(parsedPort) || parsedPort <= 0) {
 
 const rawDataDir = resolve(requireEnv("DATA_DIR"));
 const extDbUrl = process.env.DATABASE_URL?.trim();
-const tunnelSrvUrl = process.env.TUNNEL_SERVER_URL?.trim();
+const rawTunnelSrvUrl = process.env.TUNNEL_SERVER_URL?.trim();
+const tunnelSrvUrl = rawTunnelSrvUrl
+  ? normalizeTunnelServerUrl(rawTunnelSrvUrl)
+  : undefined;
 
 // Grouped Domain Configurations
 export const server = {
@@ -62,16 +66,16 @@ export const postgres = {
   host: "127.0.0.1",
 };
 
-const mysqlPortEnv = process.env.MYSQL_PORT || process.env.MARIADB_PORT;
+export const appDbUrl =
+  process.env.DATABASE_URL ||
+  `postgresql://${encodeURIComponent(postgres.user)}:${encodeURIComponent(postgres.password)}@${postgres.host}:${pgHostPort}/${encodeURIComponent(postgres.name)}`;
+
+const mysqlPortEnv = process.env.MYSQL_PORT;
 export const mariadb = {
   dataDir: resolve(
-    process.env.MYSQL_DATA_DIR?.trim() ||
-      process.env.MARIADB_DATA_DIR?.trim() ||
-      `${rawDataDir}/mariadb`,
+    process.env.MYSQL_DATA_DIR?.trim() || `${rawDataDir}/mariadb`,
   ),
-  rootPassword:
-    process.env.MYSQL_ROOT_PASSWORD?.trim() ||
-    process.env.MARIADB_ROOT_PASSWORD?.trim(),
+  rootPassword: process.env.MYSQL_ROOT_PASSWORD?.trim(),
   port: 3306,
   hostPort: mysqlPortEnv ? Number(mysqlPortEnv) : undefined,
 };
@@ -91,7 +95,12 @@ export const caddy = {
 export const backup = {
   dir: resolve(rawDataDir, "backups"),
   databasesDir: resolve(rawDataDir, "backups", "databases"),
-  maintenanceDir: resolve(rawDataDir, "custom", "files"),
+};
+
+export const custom = {
+  dir: resolve(rawDataDir, "custom"),
+  filesDir: resolve(rawDataDir, "custom", "files"),
+  caddyDir: resolve(rawDataDir, "custom", "caddy"),
 };
 
 export function getAppDbBackupDir(appId: string): string {

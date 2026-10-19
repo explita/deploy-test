@@ -8,6 +8,7 @@ interface GetDeploymentsQuery {
   status?: string | string[];
   statuses?: string | string[];
   includeLogs?: string;
+  tag?: string;
 }
 
 export async function getAppDeployments(
@@ -38,6 +39,9 @@ export async function getAppDeployments(
   const where: any = { appId: app.id };
   if (statusFilter) {
     where.status = statusFilter;
+  }
+  if (query.tag) {
+    where.tag = String(query.tag).trim();
   }
 
   const deployments = await prisma.deployment.findMany({

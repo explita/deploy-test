@@ -40,8 +40,12 @@ export async function findAppByIdOrName(
 }
 
 export async function findDeployment(id: string) {
-  const deployment = await prisma.deployment.findUnique({
-    where: { id },
+  const cleanId = stripIdPrefix(id);
+  const deployment = await prisma.deployment.findFirst({
+    where: {
+      OR: [{ id: cleanId }, { tag: id }],
+    },
+    orderBy: { startedAt: "desc" },
     include: {
       app: {
         include: {

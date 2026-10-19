@@ -156,6 +156,20 @@ export async function deployApp(request: FastifyRequest, reply: FastifyReply) {
     });
   }
 
+  const rawTag = query?.tag ? String(query.tag).trim() : undefined;
+  let deploymentTag = rawTag;
+
+  if (!deploymentTag) {
+    const existingDeploymentsCount = await prisma.deployment.count({
+      where: { appId: app.id },
+    });
+    if (existingDeploymentsCount === 0) {
+      deploymentTag = "main";
+    } else {
+      deploymentTag = `dep_${existingDeploymentsCount + 1}`;
+    }
+  }
+
   const deployment = await deployer.prepareDeployment(app, {
     preview: isPreview,
     cloneDbs: cloneDbTargets,
@@ -163,6 +177,7 @@ export async function deployApp(request: FastifyRequest, reply: FastifyReply) {
     previewDomains: previewDomains.length > 0 ? previewDomains : undefined,
     previewAuth: rawPreviewAuth,
     sourceHash: rawSourceHash,
+    tag: deploymentTag,
     tunnelPreference:
       query?.tunnel !== undefined
         ? query.tunnel !== "false" && query.tunnel !== "0"

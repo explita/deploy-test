@@ -446,7 +446,8 @@ mkdir -p /var/lib/explita/postgres \
          /var/lib/explita/caddy/data \
          /var/lib/explita/backups/databases \
          /var/lib/explita/deployments \
-         /var/lib/explita/custom/files
+         /var/lib/explita/custom/files \
+         /var/lib/explita/custom/caddy
 
 # Assign directory ownership for paths written directly by the Explita Deploy service
 if [ "$TARGET_USER" != "root" ] && id "$TARGET_USER" &>/dev/null; then
@@ -467,6 +468,7 @@ chmod 700 /var/lib/explita/backups
 chmod 700 /var/lib/explita/backups/databases
 chmod 755 /var/lib/explita/custom
 chmod 755 /var/lib/explita/custom/files
+chmod 755 /var/lib/explita/custom/caddy
 
 # Host-side mount directories for containers:
 # - PostgreSQL: postgres:17-alpine entrypoint starts as root, chowns mount to postgres UID 70, and sets 700 inside

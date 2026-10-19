@@ -17,7 +17,7 @@
 #   sudo bash scripts/setup-tunnel.sh --token exp_live_...
 #
 #   # 4. Standalone remote execution on any Explita Deploy VPS
-#   curl -fsSL https://raw.githubusercontent.com/explita/deploy-test/main/scripts/setup-tunnel.sh | sudo bash
+#   curl -fsSL https://raw.githubusercontent.com/explita/deploy/main/scripts/setup-tunnel.sh | sudo bash
 # ==============================================================================
 
 set -euo pipefail

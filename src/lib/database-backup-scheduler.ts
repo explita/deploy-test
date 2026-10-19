@@ -114,6 +114,13 @@ class DatabaseBackupScheduler {
         s3: Boolean(scheduleConfig?.s3),
       });
 
+      if (backupFile.skipped) {
+        logger.info(
+          `Automated backup skipped for app "${app.name}" (key: "${db.key}"): database content unchanged.`,
+        );
+        return;
+      }
+
       if (app) {
         await notificationService
           .notify(

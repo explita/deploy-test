@@ -54,7 +54,7 @@ class CronScheduler {
       Math.max(delay, 500),
     );
 
-    logger.always("Scheduled jobs runner active (checking every minute)");
+    logger.always("Scheduled jobs runner active...");
   }
 
   public stop(): void {
@@ -544,7 +544,10 @@ class CronScheduler {
               app,
             )
             .catch((notifyErr) => {
-              logger.warn(`[cron] Failed to send cron failure alert:`, notifyErr);
+              logger.warn(
+                `[cron] Failed to send cron failure alert:`,
+                notifyErr,
+              );
             });
         }
       } else {

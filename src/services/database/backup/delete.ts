@@ -5,6 +5,7 @@ import { resolveSafeBackupPath } from "../lib/utils.js";
 import { logger } from "@explita/protocol";
 import { FormattedApp } from "../../../lib/formatters/app.js";
 import { deleteS3Backup } from "./helpers/s3.js";
+import { prisma } from "../../../lib/prisma.js";
 
 interface BackupRequestParams extends RequestParams {
   backupId?: string;
@@ -57,6 +58,21 @@ export async function deleteDatabaseBackupFile(
   if (!localDeleted && !s3Deleted) {
     throw new Error(`Backup file not found on local disk or S3: "${backupId}"`);
   }
+
+  // Delete record from DatabaseBackup table
+  await prisma.databaseBackup
+    .deleteMany({
+      where: {
+        appId: app.id,
+        filename: backupId,
+      },
+    })
+    .catch((dbErr) => {
+      logger.warn(
+        `Failed to delete DatabaseBackup record for "${backupId}":`,
+        dbErr,
+      );
+    });
 
   return true;
 }

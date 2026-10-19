@@ -60,6 +60,7 @@ export class Deployer {
       previewAuth?: string;
       sourceHash?: string;
       tunnelPreference?: boolean;
+      tag?: string;
     },
   ): Promise<Deployment> {
     if (this.running.has(app.id))
@@ -73,10 +74,12 @@ export class Deployer {
     const previewSubdomain = options?.previewSubdomain;
     const previewDomains = options?.previewDomains;
     const sourceHash = options?.sourceHash;
+    const tag = options?.tag;
 
     const record = await prisma.deployment.create({
       data: {
         appId: app.id,
+        tag,
         status: "QUEUED",
         metadata: {
           preDeploy,
@@ -98,6 +101,7 @@ export class Deployer {
     const state: ActiveDeploymentState = {
       id: record.id,
       appId: record.appId,
+      tag: record.tag,
       status: record.status,
       startedAt: record.startedAt.toISOString(),
       logs: [],

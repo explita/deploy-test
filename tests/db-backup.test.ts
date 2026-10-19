@@ -202,4 +202,71 @@ test("resolveAppS3Config resolves app override, honors disabled state, and decry
   assert.equal(resolved?.isGlobal, false);
 });
 
+test("SqlContentHasher computes identical hashes when only volatile comments/timestamps differ", async () => {
+  const { SqlContentHasher } = await import(
+    "../src/services/database/backup/helpers/exec.js"
+  );
+  const { Readable } = await import("node:stream");
+  const { pipeline } = await import("node:stream/promises");
+  const { Writable } = await import("node:stream");
+
+  const dump1 = [
+    "-- PostgreSQL database dump",
+    "-- Dumped by pg_dump version 16.0",
+    "-- Dumped from database version 16.0",
+    "CREATE TABLE users (id SERIAL PRIMARY KEY, name VARCHAR(255));",
+    "INSERT INTO users (id, name) VALUES (1, 'Alice');",
+    "-- Dump completed on 2026-10-18 10:00:00",
+  ].join("\n");
+
+  const dump2 = [
+    "-- PostgreSQL database dump",
+    "-- Dumped by pg_dump version 16.1",
+    "-- Dumped from database version 16.1",
+    "CREATE TABLE users (id SERIAL PRIMARY KEY, name VARCHAR(255));",
+    "INSERT INTO users (id, name) VALUES (1, 'Alice');",
+    "-- Dump completed on 2026-10-18 16:30:00",
+  ].join("\n");
+
+  const dump3 = [
+    "-- PostgreSQL database dump",
+    "-- Dumped by pg_dump version 16.0",
+    "CREATE TABLE users (id SERIAL PRIMARY KEY, name VARCHAR(255));",
+    "INSERT INTO users (id, name) VALUES (1, 'Bob');",
+    "-- Dump completed on 2026-10-18 10:00:00",
+  ].join("\n");
+
+  const hashStream = async (sql: string): Promise<{ digest: string; output: string }> => {
+    const hasher = new SqlContentHasher();
+    const chunks: Buffer[] = [];
+    const sink = new Writable({
+      write(chunk, _encoding, callback) {
+        chunks.push(chunk);
+        callback();
+      },
+    });
+
+    await pipeline(Readable.from([Buffer.from(sql, "utf8")]), hasher, sink);
+    return {
+      digest: hasher.getDigest(),
+      output: Buffer.concat(chunks).toString("utf8"),
+    };
+  };
+
+  const res1 = await hashStream(dump1);
+  const res2 = await hashStream(dump2);
+  const res3 = await hashStream(dump3);
+
+  // Raw streams must pass through transparently
+  assert.equal(res1.output, dump1);
+  assert.equal(res2.output, dump2);
+
+  // Hash of dump1 and dump2 must match because only timestamps/banners differed
+  assert.equal(res1.digest, res2.digest);
+
+  // Hash of dump3 must differ because actual table data changed (Alice -> Bob)
+  assert.notEqual(res1.digest, res3.digest);
+});
+
+
 

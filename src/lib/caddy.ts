@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { caddy, docker, backup, server } from "./constants.js";
+import { caddy, docker, custom, server } from "./constants.js";
 import { run, stream } from "./runner.js";
 import { logger } from "@explita/protocol";
 import { cleanDomain } from "@explita/protocol/deploy";
@@ -49,8 +49,9 @@ export async function syncServerCaddy(): Promise<void> {
 
 export async function ensureCaddy(isInit?: boolean): Promise<void> {
   await mkdir(caddy.appsDir, { recursive: true });
+  await mkdir(custom.caddyDir, { recursive: true });
   await mkdir(caddy.dataDir, { recursive: true });
-  await mkdir(backup.maintenanceDir, { recursive: true });
+  await mkdir(custom.filesDir, { recursive: true });
 
   if (!existsSync(caddy.filePath)) {
     const defaultCaddyfile = `{
@@ -58,8 +59,19 @@ export async function ensureCaddy(isInit?: boolean): Promise<void> {
 }
 
 import /etc/caddy/apps/*.caddy
+import /etc/caddy/custom/*.caddy
 `;
     await writeFile(caddy.filePath, defaultCaddyfile, "utf8");
+  } else {
+    try {
+      const existing = await readFile(caddy.filePath, "utf8");
+      if (!existing.includes("/etc/caddy/custom/*.caddy")) {
+        const updated = `${existing.trimEnd()}\nimport /etc/caddy/custom/*.caddy\n`;
+        await writeFile(caddy.filePath, updated, "utf8");
+      }
+    } catch {
+      // ignore read/write error if concurrent
+    }
   }
 
   // Check if explita-caddy is running
@@ -78,7 +90,10 @@ import /etc/caddy/apps/*.caddy
       caddy.containerName,
     ]).catch(() => ({ code: 1, stdout: "", stderr: "" }));
 
-    if (mountInspect.stdout.includes("/var/www/custom")) {
+    if (
+      mountInspect.stdout.includes("/etc/caddy/files") &&
+      mountInspect.stdout.includes("/etc/caddy/custom")
+    ) {
       if (isInit) {
         logger.always(`Container ${caddy.containerName} is running.`);
       }
@@ -86,7 +101,7 @@ import /etc/caddy/apps/*.caddy
       return;
     }
     logger.always(
-      `Recreating ${caddy.containerName} to mount /var/www/custom...`,
+      `Recreating ${caddy.containerName} to mount custom directories...`,
     );
   } else if (inspect.code === 0) {
     logger.always(`Starting stopped container ${caddy.containerName}...`);
@@ -125,9 +140,11 @@ import /etc/caddy/apps/*.caddy
       "-v",
       `${toDockerPath(caddy.appsDir)}:/etc/caddy/apps`,
       "-v",
+      `${toDockerPath(custom.caddyDir)}:/etc/caddy/custom`,
+      "-v",
       `${toDockerPath(caddy.dataDir)}:/data`,
       "-v",
-      `${toDockerPath(backup.maintenanceDir)}:/var/www/custom`,
+      `${toDockerPath(custom.filesDir)}:/etc/caddy/files`,
       "caddy:2-alpine",
     ],
     {
@@ -323,7 +340,7 @@ async function handleMaitenanceMode(app: FormattedApp, appConfigFile: string) {
     logger.info(
       `Serving custom maintenance file (${customFile}) from disk for ${app.name}`,
     );
-    maintenanceDirective = `    root * /var/www/custom
+    maintenanceDirective = `    root * /etc/caddy/files
     rewrite * /${customFile}
     file_server {
         status 503

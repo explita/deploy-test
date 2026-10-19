@@ -465,7 +465,7 @@ packages:
     engines: {node: '>=14.0.0'}
 
   '@explita/protocol@file:explita-protocol-0.1.0.tgz':
-    resolution: {integrity: sha512-Qa2XzJRjTk7diD4KW5lsHhFlB5ptc3mPF0gNbEw6bna+I+KRsVIBW1rQfIxtM0asXDxsZVEDnBlBda19cnlYQg==, tarball: file:explita-protocol-0.1.0.tgz}
+    resolution: {integrity: sha512-DOzCBErhgXZkqMdAhY1KG6QaJ34sqt4KPHDLl/1kbezw/PZeMDTGHONSleR7a7RelVii12fp78aGQl71urdYUQ==, tarball: file:explita-protocol-0.1.0.tgz}
     version: 0.1.0
 
   '@fastify/ajv-compiler@4.0.6':

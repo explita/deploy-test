@@ -1,7 +1,7 @@
 import { mkdir, readFile } from "node:fs/promises";
 import { logger } from "@explita/protocol";
 import { FormattedApp } from "./formatters/app.js";
-import { backup } from "./constants.js";
+import { custom } from "./constants.js";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -9,7 +9,7 @@ export function resolveCustomMaintenanceFile(appId: string): string | null {
   const candidates = [`${appId}.503.html`, "503.html", "maintenance.html"];
 
   for (const candidate of candidates) {
-    if (existsSync(join(backup.maintenanceDir, candidate))) {
+    if (existsSync(join(custom.filesDir, candidate))) {
       return candidate;
     }
   }
@@ -19,11 +19,11 @@ export function resolveCustomMaintenanceFile(appId: string): string | null {
 
 export function resolveCustomMaintenancePage(appId: string): string | null {
   const file = resolveCustomMaintenanceFile(appId);
-  return file ? join(backup.maintenanceDir, file) : null;
+  return file ? join(custom.filesDir, file) : null;
 }
 
 export async function getMaintenanceHtml(app: FormattedApp): Promise<string> {
-  await mkdir(backup.maintenanceDir, { recursive: true });
+  await mkdir(custom.filesDir, { recursive: true });
 
   const customPath = resolveCustomMaintenancePage(app.id);
   if (customPath) {
@@ -191,6 +191,15 @@ export function renderMaintenanceHtml(appName: string): string {
       font-size: 0.8125rem;
       color: #6b7280;
     }
+    .footer a {
+      color: inherit;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: color 0.15s ease;
+    }
+    .footer a:hover {
+      color: var(--text-main);
+    }
   </style>
 </head>
 <body>
@@ -216,7 +225,7 @@ export function renderMaintenanceHtml(appName: string): string {
     </button>
   </div>
   <div class="footer">
-    Powered by Explita
+    Powered by <a href="https://infra.explita.ng" target="_blank" rel="noopener noreferrer">Explita</a>
   </div>
   <script>
     let remaining = 30;
