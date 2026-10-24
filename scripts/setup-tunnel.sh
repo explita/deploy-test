@@ -34,15 +34,15 @@ DIM='\033[2m'
 NC='\033[0m' # No Color
 
 log_info() {
-  echo -e "${BLUE}[INFO]${NC} $1"
+  echo -e "${BLUE}[INFO]${NC} $1" >&2
 }
 
 log_success() {
-  echo -e "${GREEN}[SUCCESS]${NC} $1"
+  echo -e "${GREEN}[SUCCESS]${NC} $1" >&2
 }
 
 log_warn() {
-  echo -e "${YELLOW}[WARN]${NC} $1"
+  echo -e "${YELLOW}[WARN]${NC} $1" >&2
 }
 
 log_error() {
@@ -165,7 +165,7 @@ fi
 # 3. Locate and Protect Target .env File
 # ------------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-}")" 2>/dev/null && pwd || echo "")"
-DEFAULT_INSTALL_DIR="/opt/explita-deploy"
+DEFAULT_INSTALL_DIR="/opt/explita/deploy"
 
 if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/../package.json" ]; then
   DEPLOY_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"

@@ -13,7 +13,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/explita/deploy-test/main/scripts/setup.sh | sudo bash
 #
 #   # Option 2: Run from cloned repository
-#   cd /opt/explita-deploy
+#   cd /opt/explita/deploy
 #   sudo bash scripts/setup.sh
 # ==============================================================================
 
@@ -32,15 +32,15 @@ DIM='\033[2m'
 NC='\033[0m' # No Color
 
 log_info() {
-  echo -e "${BLUE}[INFO]${NC} $1"
+  echo -e "${BLUE}[INFO]${NC} $1" >&2
 }
 
 log_success() {
-  echo -e "${GREEN}[SUCCESS]${NC} $1"
+  echo -e "${GREEN}[SUCCESS]${NC} $1" >&2
 }
 
 log_warn() {
-  echo -e "${YELLOW}[WARN]${NC} $1"
+  echo -e "${YELLOW}[WARN]${NC} $1" >&2
 }
 
 log_error() {
@@ -102,7 +102,7 @@ run_as_target() {
 # ------------------------------------------------------------------------------
 # 3. Configuration & Directory Resolution
 # ------------------------------------------------------------------------------
-DEFAULT_INSTALL_DIR="/opt/explita-deploy"
+DEFAULT_INSTALL_DIR="/opt/explita/deploy"
 REPO_URL="${REPO_URL:-https://github.com/explita/deploy-test.git}"
 BRANCH="${BRANCH:-main}"
 
@@ -112,10 +112,10 @@ if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/../package.json" ]; then
   DEPLOY_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 elif [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/package.json" ]; then
   DEPLOY_DIR="$SCRIPT_DIR"
-elif [ -f "${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}/package.json" ]; then
-  DEPLOY_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
+elif [ -n "$INSTALL_DIR" ]; then
+  DEPLOY_DIR="$INSTALL_DIR"
 else
-  DEPLOY_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
+  DEPLOY_DIR="$DEFAULT_INSTALL_DIR"
 fi
 
 log_info "Configuring Explita Deploy at: ${BOLD}${DEPLOY_DIR}${NC}"
