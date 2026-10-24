@@ -112,10 +112,10 @@ if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/../package.json" ]; then
   DEPLOY_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 elif [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/package.json" ]; then
   DEPLOY_DIR="$SCRIPT_DIR"
-elif [ -n "$INSTALL_DIR" ]; then
-  DEPLOY_DIR="$INSTALL_DIR"
+elif [ -f "${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}/package.json" ]; then
+  DEPLOY_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 else
-  DEPLOY_DIR="$DEFAULT_INSTALL_DIR"
+  DEPLOY_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 fi
 
 log_info "Configuring Explita Deploy at: ${BOLD}${DEPLOY_DIR}${NC}"
