@@ -2,7 +2,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { createAppSchema } from "../../zod/app-schema.js";
 import { prisma } from "../../lib/prisma.js";
 import { formatApp } from "../../lib/formatters/app.js";
-import { encryptEnvMap } from "@explita/protocol";
+import { encryptEnvMap } from "@explita/infra-protocol";
 
 export async function createApp(request: FastifyRequest, reply: FastifyReply) {
   const input = createAppSchema.parse(request.body);

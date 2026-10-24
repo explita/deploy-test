@@ -5,7 +5,7 @@ import {
   getPreviewTunnelSubdomain,
   getPreviewTunnelContainerName,
   isPreviewStatus,
-} from "@explita/protocol/deploy";
+} from "@explita/infra-protocol/deploy";
 import { syncPreviewTunnel, removePreviewTunnel } from "../src/lib/tunnel.js";
 
 test("preview helper formatting and status identification", () => {
@@ -41,11 +41,9 @@ test("syncPreviewTunnel generates preview url and removes tunnel container", asy
   await removePreviewTunnel("d-deploy1");
 });
 
-
 test("derivePreviewDatabaseUrl rewrites database name safely and fails closed", async () => {
-  const { derivePreviewDatabaseUrl } = await import(
-    "../src/lib/app-helpers.js"
-  );
+  const { derivePreviewDatabaseUrl } =
+    await import("../src/lib/app-helpers.js");
 
   // 1. Standard postgresql URL with query parameters
   const standard = derivePreviewDatabaseUrl(
@@ -70,16 +68,13 @@ test("derivePreviewDatabaseUrl rewrites database name safely and fails closed", 
   );
 
   // 3. Fail-closed: Mismatched database name throws safety violation
-  assert.throws(
-    () => {
-      derivePreviewDatabaseUrl(
-        "postgresql://user:pass@localhost:5432/wrong_db",
-        "expected_db",
-        "expected_db_prev_1",
-      );
-    },
-    /Safety violation: database URL path "\/wrong_db" does not match configured database name "expected_db"/,
-  );
+  assert.throws(() => {
+    derivePreviewDatabaseUrl(
+      "postgresql://user:pass@localhost:5432/wrong_db",
+      "expected_db",
+      "expected_db_prev_1",
+    );
+  }, /Safety violation: database URL path "\/wrong_db" does not match configured database name "expected_db"/);
 
   // 4. MySQL / MariaDB protocols derive successfully
   const mysqlClone = derivePreviewDatabaseUrl(
@@ -94,19 +89,19 @@ test("derivePreviewDatabaseUrl rewrites database name safely and fails closed", 
     "mydb",
     "mydb_prev",
   );
-  assert.equal(mariaClone, "mariadb://user:pass@explita-mariadb:3306/mydb_prev");
+  assert.equal(
+    mariaClone,
+    "mariadb://user:pass@explita-mariadb:3306/mydb_prev",
+  );
 
   // 5. Fail-closed: Unsupported protocol throws
-  assert.throws(
-    () => {
-      derivePreviewDatabaseUrl(
-        "mongodb://user:pass@localhost:27017/mydb",
-        "mydb",
-        "mydb_prev",
-      );
-    },
-    /Safety violation: unsupported protocol "mongodb:"/,
-  );
+  assert.throws(() => {
+    derivePreviewDatabaseUrl(
+      "mongodb://user:pass@localhost:27017/mydb",
+      "mydb",
+      "mydb_prev",
+    );
+  }, /Safety violation: unsupported protocol "mongodb:"/);
 
   // 6. Empty source URL returns empty string
   assert.equal(derivePreviewDatabaseUrl("", "mydb", "mydb_prev"), "");
@@ -129,56 +124,44 @@ test("validateDbCloneParams validates identifiers, port, and returns config obje
   assert.ok(valid.cloneDbName.startsWith("my_db_prev_"));
 
   // Invalid source DB name
-  assert.throws(
-    () => {
-      validateDbCloneParams(
-        { name: "my-db;drop", user: "my_user", url: "" },
-        "d1",
-        "explita",
-        5432,
-      );
-    },
-    /Invalid characters in source database name/,
-  );
+  assert.throws(() => {
+    validateDbCloneParams(
+      { name: "my-db;drop", user: "my_user", url: "" },
+      "d1",
+      "explita",
+      5432,
+    );
+  }, /Invalid characters in source database name/);
 
   // Invalid source DB user
-  assert.throws(
-    () => {
-      validateDbCloneParams(
-        { name: "my_db", user: "user'--", url: "" },
-        "d1",
-        "explita",
-        5432,
-      );
-    },
-    /Invalid characters in database user name/,
-  );
+  assert.throws(() => {
+    validateDbCloneParams(
+      { name: "my_db", user: "user'--", url: "" },
+      "d1",
+      "explita",
+      5432,
+    );
+  }, /Invalid characters in database user name/);
 
   // Invalid administrative username
-  assert.throws(
-    () => {
-      validateDbCloneParams(
-        { name: "my_db", user: "my_user", url: "" },
-        "d1",
-        "admin user",
-        5432,
-      );
-    },
-    /Invalid characters in administrative database username/,
-  );
+  assert.throws(() => {
+    validateDbCloneParams(
+      { name: "my_db", user: "my_user", url: "" },
+      "d1",
+      "admin user",
+      5432,
+    );
+  }, /Invalid characters in administrative database username/);
 
   // Invalid port
-  assert.throws(
-    () => {
-      validateDbCloneParams(
-        { name: "my_db", user: "my_user", url: "" },
-        "d1",
-        "explita",
-        99999,
-      );
-    },
-    /Invalid database port/,
-  );
+  assert.throws(() => {
+    validateDbCloneParams(
+      { name: "my_db", user: "my_user", url: "" },
+      "d1",
+      "explita",
+      99999,
+    );
+  }, /Invalid database port/);
 });
 
 test("database-clone formatPgpassEntry formats multi-target entries and escapes special characters", async () => {
@@ -196,16 +179,17 @@ test("database-clone formatPgpassEntry formats multi-target entries and escapes 
   assert.ok(lines.includes(`localhost:5432:*:${expectedUser}:${expectedPass}`));
   assert.ok(lines.includes(`127.0.0.1:5432:*:${expectedUser}:${expectedPass}`));
   assert.ok(
-    lines.includes(`/var/run/postgresql:5432:*:${expectedUser}:${expectedPass}`),
+    lines.includes(
+      `/var/run/postgresql:5432:*:${expectedUser}:${expectedPass}`,
+    ),
   );
   assert.ok(lines.includes(`/tmp:5432:*:${expectedUser}:${expectedPass}`));
 });
 
 test("database-clone validateAndParseSourceUrl verifies URL parameters and fails closed", async () => {
-  const { validateAndParseSourceUrl } = await import(
-    "../src/lib/database-clone.js"
-  );
-  const { encryptValue } = await import("@explita/protocol");
+  const { validateAndParseSourceUrl } =
+    await import("../src/lib/database-clone.js");
+  const { encryptValue } = await import("@explita/infra-protocol");
 
   // Valid managed source URL
   const validUrl = "postgres://appuser:secret123@localhost:5432/myapp_db";
@@ -224,98 +208,77 @@ test("database-clone validateAndParseSourceUrl verifies URL parameters and fails
   );
 
   // Fails if sourceDb has no url
-  assert.throws(
-    () => {
-      validateAndParseSourceUrl(
-        { name: "myapp_db", user: "appuser", url: "" },
-        "myapp_db",
-        "appuser",
-        "myapp_db_prev_123",
-        5432,
-      );
-    },
-    /does not have a connection URL configured/,
-  );
+  assert.throws(() => {
+    validateAndParseSourceUrl(
+      { name: "myapp_db", user: "appuser", url: "" },
+      "myapp_db",
+      "appuser",
+      "myapp_db_prev_123",
+      5432,
+    );
+  }, /does not have a connection URL configured/);
 
   // Fails if username doesn't match ownerUser
-  assert.throws(
-    () => {
-      validateAndParseSourceUrl(
-        {
-          name: "myapp_db",
-          user: "wronguser",
-          url: encryptValue(
-            "postgres://wronguser:pass@localhost:5432/myapp_db",
-          ),
-        },
-        "myapp_db",
-        "appuser",
-        "myapp_db_prev_123",
-        5432,
-      );
-    },
-    /Safety violation: database URL username "wronguser" does not match configured database owner "appuser"/,
-  );
+  assert.throws(() => {
+    validateAndParseSourceUrl(
+      {
+        name: "myapp_db",
+        user: "wronguser",
+        url: encryptValue("postgres://wronguser:pass@localhost:5432/myapp_db"),
+      },
+      "myapp_db",
+      "appuser",
+      "myapp_db_prev_123",
+      5432,
+    );
+  }, /Safety violation: database URL username "wronguser" does not match configured database owner "appuser"/);
 
   // Fails if port doesn't match safePort
-  assert.throws(
-    () => {
-      validateAndParseSourceUrl(
-        {
-          name: "myapp_db",
-          user: "appuser",
-          url: encryptValue(
-            "postgres://appuser:pass@localhost:5433/myapp_db",
-          ),
-        },
-        "myapp_db",
-        "appuser",
-        "myapp_db_prev_123",
-        5432,
-      );
-    },
-    /Safety violation: database URL port "5433" does not match managed database port "5432"/,
-  );
+  assert.throws(() => {
+    validateAndParseSourceUrl(
+      {
+        name: "myapp_db",
+        user: "appuser",
+        url: encryptValue("postgres://appuser:pass@localhost:5433/myapp_db"),
+      },
+      "myapp_db",
+      "appuser",
+      "myapp_db_prev_123",
+      5432,
+    );
+  }, /Safety violation: database URL port "5433" does not match managed database port "5432"/);
 
   // Fails if database name in path doesn't match sourceDbName
-  assert.throws(
-    () => {
-      validateAndParseSourceUrl(
-        {
-          name: "myapp_db",
-          user: "appuser",
-          url: encryptValue(
-            "postgres://appuser:pass@localhost:5432/other_db",
-          ),
-        },
-        "myapp_db",
-        "appuser",
-        "myapp_db_prev_123",
-        5432,
-      );
-    },
-    /Safety violation: database URL database name "other_db" does not match configured source database name "myapp_db"/,
-  );
+  assert.throws(() => {
+    validateAndParseSourceUrl(
+      {
+        name: "myapp_db",
+        user: "appuser",
+        url: encryptValue("postgres://appuser:pass@localhost:5432/other_db"),
+      },
+      "myapp_db",
+      "appuser",
+      "myapp_db_prev_123",
+      5432,
+    );
+  }, /Safety violation: database URL database name "other_db" does not match configured source database name "myapp_db"/);
 
   // Fails if hostname is an external unmanaged host
-  assert.throws(
-    () => {
-      validateAndParseSourceUrl(
-        {
-          name: "myapp_db",
-          user: "appuser",
-          url: encryptValue(
-            "postgres://appuser:pass@external-db.aws.com:5432/myapp_db",
-          ),
-        },
-        "myapp_db",
-        "appuser",
-        "myapp_db_prev_123",
-        5432,
-      );
-    },
-    /Safety violation: database URL host "external-db.aws.com" does not match managed database instance/,
-  );
+  assert.throws(() => {
+    validateAndParseSourceUrl(
+      {
+        name: "myapp_db",
+        user: "appuser",
+        url: encryptValue(
+          "postgres://appuser:pass@external-db.aws.com:5432/myapp_db",
+        ),
+      },
+      "myapp_db",
+      "appuser",
+      "myapp_db_prev_123",
+      5432,
+    );
+  }, /Safety violation: database URL host "external-db.aws.com" does not match managed database instance/);
 });
 
 test("database-clone dropPreviewDatabase handles empty or invalid identifiers safely", async () => {
@@ -327,5 +290,3 @@ test("database-clone dropPreviewDatabase handles empty or invalid identifiers sa
   // Invalid SQL injection identifier skips drop without throwing
   await dropPreviewDatabase("db; DROP TABLE users;");
 });
-
-

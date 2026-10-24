@@ -1,7 +1,7 @@
 import "@explita/env-loader/auto";
 import { app } from "./app.js";
 import { server } from "./lib/constants.js";
-import { logger } from "@explita/protocol";
+import { logger } from "@explita/infra-protocol";
 
 app.listen({ port: server.port, host: server.host }, (err, address) => {
   if (err) {

@@ -2,7 +2,7 @@ import net from "node:net";
 import { FastifyRequest } from "fastify";
 import type { WebSocket } from "@fastify/websocket";
 import { run } from "../../lib/runner.js";
-import { logger } from "@explita/protocol";
+import { logger } from "@explita/infra-protocol";
 import {
   dockerApiRequest,
   startAndHijackExec,

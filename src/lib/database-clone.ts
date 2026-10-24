@@ -3,8 +3,8 @@ import {
   AppDbEntry,
   POSTGRES_CONTAINER_NAME,
   MARIADB_CONTAINER_NAME,
-} from "@explita/protocol/deploy";
-import { logger, decryptValue } from "@explita/protocol";
+} from "@explita/infra-protocol/deploy";
+import { logger, decryptValue } from "@explita/infra-protocol";
 import { run } from "./runner.js";
 import { postgres, mariadb } from "./constants.js";
 import {

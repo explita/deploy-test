@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { run, stream } from "./runner.js";
 import { database, docker, postgres } from "./constants.js";
-import { POSTGRES_CONTAINER_NAME, logger } from "@explita/protocol";
+import { POSTGRES_CONTAINER_NAME, logger } from "@explita/infra-protocol";
 
 function getPrismaCliPath(): string {
   const require = createRequire(import.meta.url);

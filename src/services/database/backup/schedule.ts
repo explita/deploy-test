@@ -2,8 +2,11 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { RequestParams } from "../../../types/misc.js";
 import { prisma } from "../../../lib/prisma.js";
 import { findAppByIdOrName } from "../../../lib/app-helpers.js";
-import { DatabaseBackupSchedule, isValidCron } from "@explita/protocol/deploy";
-import { logger } from "@explita/protocol";
+import {
+  DatabaseBackupSchedule,
+  isValidCron,
+} from "@explita/infra-protocol/deploy";
+import { logger } from "@explita/infra-protocol";
 import { FormattedApp } from "../../../lib/formatters/app.js";
 
 export const DEFAULT_BACKUP_SCHEDULE: DatabaseBackupSchedule = {
@@ -183,8 +186,7 @@ export async function saveAppBackupSchedule(
   const nextEnabled =
     update.enabled !== undefined ? Boolean(update.enabled) : current.enabled;
 
-  const nextS3 =
-    update.s3 !== undefined ? Boolean(update.s3) : current.s3;
+  const nextS3 = update.s3 !== undefined ? Boolean(update.s3) : current.s3;
 
   const updatedSchedule: DatabaseBackupSchedule = {
     ...current,

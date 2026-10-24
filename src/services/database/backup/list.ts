@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { RequestParams } from "../../../types/misc.js";
-import { DatabaseBackupFile } from "@explita/protocol";
+import { DatabaseBackupFile } from "@explita/infra-protocol";
 import { FormattedApp } from "../../../lib/formatters/app.js";
 import { prisma } from "../../../lib/prisma.js";
 

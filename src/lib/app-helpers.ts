@@ -1,7 +1,11 @@
-import { AppDbEntry } from "@explita/protocol/deploy";
-import { formatApp } from "./formatters/app.js";
+import { AppDbEntry } from "@explita/infra-protocol/deploy";
+import { formatApp, FormattedApp } from "./formatters/app.js";
 import { prisma } from "./prisma.js";
 import { stripAppPrefixes, stripIdPrefix } from "./id.js";
+import {
+  AppEnvironmentOptions,
+  ValidatedDbCloneParams,
+} from "../types/misc.js";
 
 export async function findAppByIdOrName(
   identifier: string,
@@ -120,14 +124,6 @@ export function derivePreviewDatabaseUrl(
   return cloneUrl;
 }
 
-export interface ValidatedDbCloneParams {
-  sourceDbName: string;
-  ownerUser: string;
-  cloneDbName: string;
-  adminUser: string;
-  safePort: number;
-}
-
 /**
  * Validates database cloning parameters and generates safe, sanitised database identifiers.
  * Throws a clear descriptive Error if any identifier contains illegal characters or if the port is invalid.
@@ -171,3 +167,94 @@ export function validateDbCloneParams(
     safePort,
   };
 }
+
+/**
+ * Extracts and consolidates all environment variables for an application, including:
+ * - Primary/Default Database (DATABASE_URL)
+ * - Secondary Databases (<KEY>_DATABASE_URL)
+ * - Redis Cache (REDIS_URL)
+ * - Decrypted Custom Application Environment Variables (app.envs)
+ *
+ * Supports preview database overrides and secret masking.
+ */
+export function getAppEnvironment(
+  app: FormattedApp,
+  options?: AppEnvironmentOptions,
+) {
+  const env: Record<string, string> = {};
+
+  // 1. Primary/Default Database
+  const defaultDb =
+    app.databasesMap?.get("default") ||
+    app.databasesMap?.get("primary") ||
+    app.databases?.[0];
+
+  const defaultClonedUrl =
+    typeof options?.overrideDbUrls === "string"
+      ? options.overrideDbUrls
+      : (defaultDb && options?.overrideDbUrls?.get(defaultDb.key)) ||
+        options?.overrideDbUrls?.get("default") ||
+        options?.overrideDbUrls?.get("primary");
+
+  const defaultDbUrl = defaultClonedUrl || defaultDb?.url;
+  if (defaultDbUrl) {
+    env["DATABASE_URL"] = defaultDbUrl;
+  }
+
+  // 2. Secondary Databases
+  if (Array.isArray(app.databases)) {
+    for (const db of app.databases) {
+      if (db.key !== "default" && db.key !== "primary" && db.url) {
+        const envKey = `${db.key.toUpperCase().replace(/[^A-Z0-9_]/g, "_")}_DATABASE_URL`;
+        const activeUrl =
+          typeof options?.overrideDbUrls !== "string" &&
+          options?.overrideDbUrls?.has(db.key)
+            ? options.overrideDbUrls.get(db.key)!
+            : db.url;
+        env[envKey] = activeUrl;
+      }
+    }
+  }
+
+  // 3. Redis
+  if (app.redis?.url) {
+    env["REDIS_URL"] = app.redis.url;
+  }
+
+  // 4. Custom App Environment Variables (stored in app.envs)
+  if (Array.isArray(app.envs)) {
+    for (const e of app.envs) {
+      if (e.key) {
+        env[e.key] =
+          options?.revealSecrets === false ? "••••••••" : (e.value ?? "");
+      }
+    }
+  }
+
+  // 5. Generate Docker CLI arguments
+  const dockerArgs: string[] = [];
+  for (const [key, value] of Object.entries(env)) {
+    dockerArgs.push("-e", `${key}=${value}`);
+  }
+
+  const meta = app.metadata;
+  const resources = meta?.resources;
+  if (resources?.memory) {
+    dockerArgs.push(`--memory=${resources.memory}`);
+  }
+  if (resources?.cpus) {
+    dockerArgs.push(`--cpus=${resources.cpus}`);
+  }
+
+  if (meta?.volumes && typeof meta.volumes === "object") {
+    const volumeEntries = Object.entries(meta.volumes);
+    for (const [hostOrVol, containerPath] of volumeEntries) {
+      dockerArgs.push("-v", `${hostOrVol}:${containerPath}`);
+    }
+  }
+
+  return { env, dockerArgs };
+}
+
+export const extractAppEnvironment = getAppEnvironment;
+export const resolveAppEnvironment = getAppEnvironment;

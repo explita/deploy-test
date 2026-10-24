@@ -1,11 +1,11 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { RequestParams } from "../../../types/misc.js";
 import { prisma } from "../../../lib/prisma.js";
-import { encryptValue, logger } from "@explita/protocol";
+import { encryptValue, logger } from "@explita/infra-protocol";
 import {
   DatabaseBackupS3Config,
   DatabaseBackupS3Status,
-} from "@explita/protocol/deploy";
+} from "@explita/infra-protocol/deploy";
 import {
   resolveAppS3Config,
   resolveGlobalS3Config,

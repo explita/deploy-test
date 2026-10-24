@@ -1,8 +1,11 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { RequestParams } from "../../types/misc.js";
 import { prisma } from "../../lib/prisma.js";
-import { DumpScheduleConfig, isValidCron } from "@explita/protocol/deploy";
-import { logger } from "@explita/protocol";
+import {
+  DumpScheduleConfig,
+  isValidCron,
+} from "@explita/infra-protocol/deploy";
+import { logger } from "@explita/infra-protocol";
 
 export const DEFAULT_DUMP_SCHEDULE: DumpScheduleConfig = {
   schedule: "0 3 * * 0", // Weekly on Sunday at 03:00 UTC

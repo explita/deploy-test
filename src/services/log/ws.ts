@@ -1,8 +1,8 @@
 import { FastifyRequest } from "fastify";
-import { logger } from "@explita/protocol";
+import { logger } from "@explita/infra-protocol";
 import type { WebSocket } from "@fastify/websocket";
 import { stream } from "../../lib/runner.js";
-import { RuntimeLogsQuery } from "@explita/protocol/deploy";
+import { RuntimeLogsQuery } from "@explita/infra-protocol/deploy";
 
 export async function streamRuntimeLogsWs(
   socket: WebSocket,

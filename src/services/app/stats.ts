@@ -6,7 +6,7 @@ import {
   fetchDockerStats,
   streamDockerStatsWs,
 } from "../../lib/docker-stats.js";
-import { getAppTunnelContainerName } from "@explita/protocol/deploy";
+import { getAppTunnelContainerName } from "@explita/infra-protocol/deploy";
 
 async function getRunningAppContainers(app: FormattedApp): Promise<string[]> {
   const candidates: string[] = [];

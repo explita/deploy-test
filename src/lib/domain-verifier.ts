@@ -3,8 +3,8 @@ import { existsSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { caddy } from "./constants.js";
-import { cleanDomain, DomainCheckResult } from "@explita/protocol/deploy";
-import { getServerPublicIp } from "@explita/protocol";
+import { cleanDomain, DomainCheckResult } from "@explita/infra-protocol/deploy";
+import { getServerPublicIp } from "@explita/infra-protocol";
 
 /**
  * Checks if Caddy has already provisioned an active SSL/TLS certificate for this domain.

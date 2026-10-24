@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { run, stream } from "../../lib/runner.js";
-import { logger } from "@explita/protocol";
+import { logger } from "@explita/infra-protocol";
 
 interface ExecBody {
   command?: string | string[];

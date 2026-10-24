@@ -9,6 +9,7 @@ import { prisma } from "../../lib/prisma.js";
 import { stream } from "../../lib/runner.js";
 import { formatApp, FormattedApp } from "../../lib/formatters/app.js";
 import { stripAppPrefixes } from "../../lib/id.js";
+import { getAppEnvironment } from "../../lib/app-helpers.js";
 import { server, postgres, mariadb } from "../../lib/constants.js";
 import {
   logger,
@@ -16,8 +17,8 @@ import {
   decryptValue,
   POSTGRES_CONTAINER_NAME,
   MARIADB_CONTAINER_NAME,
-} from "@explita/protocol";
-import type { DumpQuery, DumpManifest } from "@explita/protocol/deploy";
+} from "@explita/infra-protocol";
+import type { DumpQuery, DumpManifest } from "@explita/infra-protocol/deploy";
 import type { RequestParams } from "../../types/misc.js";
 import { uploadDumpToS3 } from "../database/backup/helpers/s3.js";
 
@@ -61,10 +62,10 @@ export async function stageAppDump(
 
   // 2. Write .env (environment variables)
   if (options.includeEnv) {
-    const envEntries = app.envs || [];
-    const envLines = envEntries.map(
-      (e) => `${e.key}=${options.revealSecrets ? e.value : "••••••••"}`,
-    );
+    const { env } = getAppEnvironment(app, {
+      revealSecrets: options.revealSecrets,
+    });
+    const envLines = Object.entries(env).map(([k, v]) => `${k}=${v}`);
     const header = options.revealSecrets
       ? "# Explita Environment Variables (Unredacted)\n"
       : "# Explita Environment Variables (Secrets Redacted)\n";
@@ -314,9 +315,7 @@ export async function dumpAllApps(
     await mkdir(appsBaseDir, { recursive: true });
 
     const formattedApps = apps.map((app) =>
-      stripAppPrefixes(
-        formatApp(app, { showAll: options.revealSecrets }),
-      ),
+      stripAppPrefixes(formatApp(app, { showAll: options.revealSecrets })),
     );
 
     for (const app of formattedApps) {

@@ -15,8 +15,8 @@ import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
 import { FormattedApp } from "../../../../lib/formatters/app.js";
 import { globalS3 } from "../../../../lib/constants.js";
-import { decryptValue, logger } from "@explita/protocol";
-import { DatabaseBackupS3Config } from "@explita/protocol/deploy";
+import { decryptValue, logger } from "@explita/infra-protocol";
+import { DatabaseBackupS3Config } from "@explita/infra-protocol/deploy";
 import { extractKeyFromBackupFilename } from "../../lib/utils.js";
 
 export interface ResolvedS3Config extends DatabaseBackupS3Config {

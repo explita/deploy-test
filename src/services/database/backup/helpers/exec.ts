@@ -5,17 +5,12 @@ import {
   decryptValue,
   POSTGRES_CONTAINER_NAME,
   MARIADB_CONTAINER_NAME,
-} from "@explita/protocol";
+} from "@explita/infra-protocol";
 import { postgres, mariadb } from "../../../../lib/constants.js";
 import { findAppByIdOrName } from "../../../../lib/app-helpers.js";
 import { ensureBackupDir, generateBackupFilename } from "../../lib/utils.js";
 import { stream } from "../../../../lib/runner.js";
-import {
-  createWriteStream,
-  renameSync,
-  statSync,
-  unlinkSync,
-} from "node:fs";
+import { createWriteStream, renameSync, statSync, unlinkSync } from "node:fs";
 import { createGzip } from "node:zlib";
 import { pipeline } from "node:stream/promises";
 import { pruneOldDatabaseBackups } from "./prune.js";
@@ -199,10 +194,12 @@ export async function executeDatabaseBackup(
   const isForce = Boolean(options?.force);
 
   // Check existing backup strictly from DatabaseBackup table
-  const latestBackup = await prisma.databaseBackup.findFirst({
-    where: { appId: app.id, key: db.key },
-    orderBy: { createdAt: "desc" },
-  }).catch(() => null);
+  const latestBackup = await prisma.databaseBackup
+    .findFirst({
+      where: { appId: app.id, key: db.key },
+      orderBy: { createdAt: "desc" },
+    })
+    .catch(() => null);
 
   const previousHash = latestBackup?.contentHash;
 
@@ -338,43 +335,52 @@ export async function executeDatabaseBackup(
   });
 
   // Persist structured backup record in dedicated database table
-  await prisma.databaseBackup.upsert({
-    where: { filename },
-    create: {
-      appId: app.id,
-      filename,
-      key: db.key,
-      dbName: db.name,
-      sizeBytes: stats.size,
-      sizeFormatted: formatSize(stats.size),
-      contentHash,
-      storage: s3Result?.s3Url ? "both" : "local",
-      s3Url: s3Result?.s3Url,
-      createdAt: stats.mtime,
-    },
-    update: {
-      sizeBytes: stats.size,
-      sizeFormatted: formatSize(stats.size),
-      contentHash,
-      storage: s3Result?.s3Url ? "both" : "local",
-      s3Url: s3Result?.s3Url,
-    },
-  }).catch((dbErr) => {
-    logger.warn(`Failed to insert DatabaseBackup model for "${filename}":`, dbErr);
-  });
+  await prisma.databaseBackup
+    .upsert({
+      where: { filename },
+      create: {
+        appId: app.id,
+        filename,
+        key: db.key,
+        dbName: db.name,
+        sizeBytes: stats.size,
+        sizeFormatted: formatSize(stats.size),
+        contentHash,
+        storage: s3Result?.s3Url ? "both" : "local",
+        s3Url: s3Result?.s3Url,
+        createdAt: stats.mtime,
+      },
+      update: {
+        sizeBytes: stats.size,
+        sizeFormatted: formatSize(stats.size),
+        contentHash,
+        storage: s3Result?.s3Url ? "both" : "local",
+        s3Url: s3Result?.s3Url,
+      },
+    })
+    .catch((dbErr) => {
+      logger.warn(
+        `Failed to insert DatabaseBackup model for "${filename}":`,
+        dbErr,
+      );
+    });
 
   // Prune excess database backup records beyond retention limit
-  const excessRows = await prisma.databaseBackup.findMany({
-    where: { appId: app.id, key: db.key },
-    orderBy: { createdAt: "desc" },
-    skip: keep,
-    select: { id: true },
-  }).catch(() => []);
+  const excessRows = await prisma.databaseBackup
+    .findMany({
+      where: { appId: app.id, key: db.key },
+      orderBy: { createdAt: "desc" },
+      skip: keep,
+      select: { id: true },
+    })
+    .catch(() => []);
 
   if (excessRows.length > 0) {
-    await prisma.databaseBackup.deleteMany({
-      where: { id: { in: excessRows.map((r) => r.id) } },
-    }).catch(() => {});
+    await prisma.databaseBackup
+      .deleteMany({
+        where: { id: { in: excessRows.map((r) => r.id) } },
+      })
+      .catch(() => {});
   }
 
   logger.info(

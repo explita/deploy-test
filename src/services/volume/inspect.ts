@@ -4,7 +4,7 @@ import { run } from "../../lib/runner.js";
 import type {
   VolumeInspectResult,
   VolumeAppBinding,
-} from "@explita/protocol/deploy";
+} from "@explita/infra-protocol/deploy";
 
 type InspectVolumeParams = {
   name: string;

@@ -2,7 +2,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { syncAppCaddy } from "../../lib/caddy.js";
 import { prisma } from "../../lib/prisma.js";
 import type { RequestParams } from "../../types/misc.js";
-import { logger } from "@explita/protocol";
+import { logger } from "@explita/infra-protocol";
 
 interface DomainParams extends RequestParams {
   domain: string;

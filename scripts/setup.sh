@@ -698,25 +698,18 @@ if [ -n "${TUNNEL_TOKEN:-}" ] && [ -z "$(get_env_val 'TUNNEL_TOKEN')" ]; then
   log_success "Saved TUNNEL_TOKEN from environment into ${ENV_FILE}."
 fi
 
-# Optional interactive preview tunnel configuration
+# Automated preview tunnel provisioning (using server IP)
 if [ -z "$(get_env_val 'TUNNEL_TOKEN')" ]; then
-  if { [ -t 0 ] || { [ -c /dev/tty ] && (: < /dev/tty) 2>/dev/null; }; } && [ "${SKIP_TUNNEL_SETUP:-false}" != "true" ]; then
-    echo ""
-    if [ -c /dev/tty ] && (: < /dev/tty) 2>/dev/null; then
-      read -r -p "Configure automated preview tunnels now? [Y/n]: " WANT_TUNNEL < /dev/tty || WANT_TUNNEL="y"
-    else
-      read -r -p "Configure automated preview tunnels now? [Y/n]: " WANT_TUNNEL || WANT_TUNNEL="y"
+  if [ "${SKIP_TUNNEL_SETUP:-false}" != "true" ]; then
+    TUNNEL_SCRIPT="$DEPLOY_DIR/scripts/setup-tunnel.sh"
+    if [ -f "$TUNNEL_SCRIPT" ]; then
+      log_info "Auto-requesting Explita Tunnel token for preview deployments..."
+      if (cd "$DEPLOY_DIR" && bash "$TUNNEL_SCRIPT" --auto); then
+        log_success "Preview tunnels automatically configured."
+      else
+        log_warn "Could not auto-provision tunnel token (run 'sudo bash scripts/setup-tunnel.sh' anytime)."
+      fi
     fi
-    case "$WANT_TUNNEL" in
-      [yY][eE][sS]|[yY]|"")
-        if [ -f "$DEPLOY_DIR/scripts/setup-tunnel.sh" ]; then
-          (cd "$DEPLOY_DIR" && bash "$DEPLOY_DIR/scripts/setup-tunnel.sh" || true)
-        fi
-        ;;
-      *)
-        log_info "Skipped preview tunnel setup (run 'sudo bash scripts/setup-tunnel.sh' anytime)."
-        ;;
-    esac
   fi
 fi
 

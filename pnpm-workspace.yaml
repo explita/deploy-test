@@ -2,3 +2,5 @@ allowBuilds:
   "@prisma/engines": true
   esbuild: true
   prisma: true
+minimumReleaseAgeExclude:
+  - "@explita/infra-protocol@0.1.0"

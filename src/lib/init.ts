@@ -9,7 +9,7 @@ import { cronScheduler } from "./cron-scheduler.js";
 import { dbBackupScheduler } from "./database-backup-scheduler.js";
 import { dumpScheduler } from "./dump-scheduler.js";
 import { containerHealthMonitor } from "./container-health-monitor.js";
-import { assertEncryptionKey, logger } from "@explita/protocol";
+import { assertEncryptionKey, logger } from "@explita/infra-protocol";
 
 export async function init() {
   process.env.LOG_PREFIX = "[deploy-server]";

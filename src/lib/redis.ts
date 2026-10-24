@@ -2,7 +2,7 @@ import { mkdir } from "node:fs/promises";
 import { run, stream } from "./runner.js";
 import { docker } from "./constants.js";
 import { resolveRedisConfig } from "./utils.js";
-import { logger } from "@explita/protocol";
+import { logger } from "@explita/infra-protocol";
 
 export async function ensureRedis(): Promise<void> {
   const config = resolveRedisConfig();

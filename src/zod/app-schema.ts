@@ -2,7 +2,7 @@ import z from "zod";
 import {
   normalizeVolumes,
   normalizeNotificationConfig,
-} from "@explita/protocol";
+} from "@explita/infra-protocol";
 
 export const notifySchema = z.preprocess(
   (val) => {

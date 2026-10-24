@@ -2,14 +2,14 @@ import { resolve } from "node:path";
 import {
   CADDY_CONTAINER_NAME,
   DEFAULT_DOCKER_NETWORK,
-} from "@explita/protocol/deploy";
+} from "@explita/infra-protocol/deploy";
 import {
   DEFAULT_TUNNEL_DOMAIN,
   DEFAULT_TUNNEL_IMAGE,
   parseSize,
   requireEnv,
   normalizeTunnelServerUrl,
-} from "@explita/protocol";
+} from "@explita/infra-protocol";
 
 const parsedPort = Number(requireEnv("PORT"));
 if (Number.isNaN(parsedPort) || parsedPort <= 0) {

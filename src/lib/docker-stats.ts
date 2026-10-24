@@ -1,7 +1,7 @@
 import type { WebSocket } from "@fastify/websocket";
 import { run, stream } from "./runner.js";
-import { ContainerStat } from "@explita/protocol/deploy";
-import { logger } from "@explita/protocol";
+import { ContainerStat } from "@explita/infra-protocol/deploy";
+import { logger } from "@explita/infra-protocol";
 
 /**
  * Parses a single JSON line from `docker stats --format json`.

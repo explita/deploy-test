@@ -8,7 +8,7 @@ import {
   type NotificationPayload,
   logger,
   PRODUCT_NAME,
-} from "@explita/protocol";
+} from "@explita/infra-protocol";
 import { FormattedApp } from "./formatters/app.js";
 
 export interface SendResult {

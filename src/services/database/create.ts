@@ -9,7 +9,7 @@ import {
   encryptValue,
   POSTGRES_CONTAINER_NAME,
   MARIADB_CONTAINER_NAME,
-} from "@explita/protocol";
+} from "@explita/infra-protocol";
 
 interface CreateDbBody {
   key?: string;

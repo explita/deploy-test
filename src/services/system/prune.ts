@@ -1,8 +1,8 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { run } from "../../lib/runner.js";
-import { logger } from "@explita/protocol";
-import { isCoreInfraContainer } from "@explita/protocol/deploy";
+import { logger } from "@explita/infra-protocol";
+import { isCoreInfraContainer } from "@explita/infra-protocol/deploy";
 import { cron } from "../../lib/constants.js";
 
 interface PruneBody {

@@ -3,7 +3,7 @@ import { database, postgres, mariadb } from "../../../lib/constants.js";
 import {
   POSTGRES_CONTAINER_NAME,
   MARIADB_CONTAINER_NAME,
-} from "@explita/protocol/deploy";
+} from "@explita/infra-protocol/deploy";
 
 export async function execPostgres(
   sql: string,

@@ -2,9 +2,9 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { syncAppCaddy } from "../../lib/caddy.js";
 import { prisma } from "../../lib/prisma.js";
 import type { RequestParams } from "../../types/misc.js";
-import { logger } from "@explita/protocol";
+import { logger } from "@explita/infra-protocol";
 import { verifyDomainDns } from "../../lib/domain-verifier.js";
-import { cleanDomain, normalizeDomains } from "@explita/protocol";
+import { cleanDomain, normalizeDomains } from "@explita/infra-protocol";
 
 interface AddDomainBody {
   domains?: string[];

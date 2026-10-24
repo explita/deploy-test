@@ -6,10 +6,14 @@ import { saveDeploymentLogs } from "../../lib/log-helpers.js";
 import { ensureDockerNetwork } from "../../lib/docker-network.js";
 import { syncAppCaddy } from "../../lib/caddy.js";
 import { syncAppTunnel } from "../../lib/tunnel.js";
-import { logger } from "@explita/protocol";
+import { logger } from "@explita/infra-protocol";
 
 import { deployer } from "../../lib/deployer.js";
-import { findDeployment, findAppByIdOrName } from "../../lib/app-helpers.js";
+import {
+  findDeployment,
+  findAppByIdOrName,
+  getAppEnvironment,
+} from "../../lib/app-helpers.js";
 import { formatDeploymentId, formatAppId } from "../../lib/id.js";
 import { cronScheduler } from "../../lib/cron-scheduler.js";
 
@@ -83,11 +87,6 @@ export async function rollbackDeployment(
 
   const newContainerName = `${target.containerName}-rollback-${Date.now()}`;
   const meta = app.metadata;
-  const databases = app.databases;
-  const defaultDb = app.databasesMap.get("default");
-  const dbUrl = defaultDb?.url;
-
-  const redisUrl = app.redis?.url;
 
   const runArgs = [
     "run",
@@ -100,36 +99,8 @@ export async function rollbackDeployment(
     newContainerName,
   ];
 
-  if (dbUrl) {
-    runArgs.push("-e", `DATABASE_URL=${dbUrl}`);
-  }
-
-  for (const db of databases) {
-    if (db.key !== "default" && db.url) {
-      const envKey = `${db.key.toUpperCase().replace(/[^A-Z0-9_]/g, "_")}_DATABASE_URL`;
-      runArgs.push("-e", `${envKey}=${db.url}`);
-    }
-  }
-
-  if (redisUrl) {
-    runArgs.push("-e", `REDIS_URL=${redisUrl}`);
-  }
-
-  if (app.envs && app.envs.length > 0) {
-    for (const e of app.envs) {
-      if (e.key && e.value) {
-        runArgs.push("-e", `${e.key}=${e.value}`);
-      }
-    }
-  }
-
-  const resources = meta.resources;
-  if (resources?.memory) {
-    runArgs.push(`--memory=${resources.memory}`);
-  }
-  if (resources?.cpus) {
-    runArgs.push(`--cpus=${resources.cpus}`);
-  }
+  const { dockerArgs } = getAppEnvironment(app);
+  runArgs.push(...dockerArgs);
 
   runArgs.push(target.image);
 

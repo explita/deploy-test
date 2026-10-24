@@ -8,8 +8,8 @@ import {
   describeCron,
   getNextCronRun,
   matchesCron,
-} from "@explita/protocol/deploy";
-import { logger } from "@explita/protocol";
+} from "@explita/infra-protocol/deploy";
+import { logger } from "@explita/infra-protocol";
 import { findAppByIdOrName } from "./app-helpers.js";
 import { stripIdPrefix } from "./id.js";
 import { cron } from "./constants.js";

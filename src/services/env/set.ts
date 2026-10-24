@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { prisma } from "../../lib/prisma.js";
-import { encryptEnvMap } from "@explita/protocol";
+import { encryptEnvMap } from "@explita/infra-protocol";
 import { setEnvSchema } from "../../zod/env-schema.js";
 import { findAppByIdOrName } from "../../lib/app-helpers.js";
 import { deployer } from "../../lib/deployer.js";

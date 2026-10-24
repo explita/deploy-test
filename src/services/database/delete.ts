@@ -3,7 +3,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { execPostgres, execMariaDb } from "./lib/exec.js";
 import { getAppDbBackupDir } from "../../lib/constants.js";
-import { decryptValue } from "@explita/protocol";
+import { decryptValue } from "@explita/infra-protocol";
 
 export async function deleteDatabase(
   request: FastifyRequest,
@@ -25,7 +25,8 @@ export async function deleteDatabase(
   if (targetDb.url) {
     try {
       const decrypted = decryptValue(targetDb.url);
-      isMysql = decrypted.startsWith("mysql:") || decrypted.startsWith("mariadb:");
+      isMysql =
+        decrypted.startsWith("mysql:") || decrypted.startsWith("mariadb:");
     } catch {
       // Ignore decrypt failure and default to postgres
     }
@@ -33,10 +34,14 @@ export async function deleteDatabase(
 
   if (isMysql) {
     if (targetDb.name) {
-      await execMariaDb(`DROP DATABASE IF EXISTS \`${targetDb.name}\`;`).catch(() => {});
+      await execMariaDb(`DROP DATABASE IF EXISTS \`${targetDb.name}\`;`).catch(
+        () => {},
+      );
     }
     if (targetDb.user) {
-      await execMariaDb(`DROP USER IF EXISTS '${targetDb.user}'@'%'; FLUSH PRIVILEGES;`).catch(() => {});
+      await execMariaDb(
+        `DROP USER IF EXISTS '${targetDb.user}'@'%'; FLUSH PRIVILEGES;`,
+      ).catch(() => {});
     }
   } else {
     if (targetDb.name) {
@@ -45,7 +50,9 @@ export async function deleteDatabase(
       ).catch(() => {});
     }
     if (targetDb.user) {
-      await execPostgres(`DROP ROLE IF EXISTS "${targetDb.user}";`).catch(() => {});
+      await execPostgres(`DROP ROLE IF EXISTS "${targetDb.user}";`).catch(
+        () => {},
+      );
     }
   }
 

@@ -1,7 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { execRedisCli } from "../../lib/redis.js";
-import { logger } from "@explita/protocol";
+import { logger } from "@explita/infra-protocol";
 
 export async function deleteRedis(
   request: FastifyRequest,

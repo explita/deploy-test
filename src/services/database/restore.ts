@@ -6,7 +6,7 @@ import {
   decryptValue,
   POSTGRES_CONTAINER_NAME,
   MARIADB_CONTAINER_NAME,
-} from "@explita/protocol";
+} from "@explita/infra-protocol";
 import { isMysqlOrMariaDb } from "../../lib/mariadb.js";
 
 export async function restoreDatabase(

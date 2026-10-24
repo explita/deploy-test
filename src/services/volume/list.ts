@@ -5,7 +5,7 @@ import type {
   VolumeItem,
   VolumeAppBinding,
   VolumeListResult,
-} from "@explita/protocol/deploy";
+} from "@explita/infra-protocol/deploy";
 
 type ListVolumesQuery = {
   app?: string;

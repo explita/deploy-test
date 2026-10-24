@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { run } from "../../lib/runner.js";
-import { logger } from "@explita/protocol";
+import { logger } from "@explita/infra-protocol";
 
 type DeleteVolumeParams = {
   name: string;

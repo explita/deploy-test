@@ -2,7 +2,7 @@ import { existsSync, unlinkSync } from "node:fs";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { RequestParams } from "../../../types/misc.js";
 import { resolveSafeBackupPath } from "../lib/utils.js";
-import { logger } from "@explita/protocol";
+import { logger } from "@explita/infra-protocol";
 import { FormattedApp } from "../../../lib/formatters/app.js";
 import { deleteS3Backup } from "./helpers/s3.js";
 import { prisma } from "../../../lib/prisma.js";

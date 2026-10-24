@@ -8,7 +8,7 @@ import { deployer } from "../../lib/deployer.js";
 import { server } from "../../lib/constants.js";
 import { prisma } from "../../lib/prisma.js";
 import { removeAppTunnel } from "../../lib/tunnel.js";
-import { AppDbEntry } from "@explita/protocol/deploy";
+import { AppDbEntry } from "@explita/infra-protocol/deploy";
 import { formatDeployment } from "../../lib/formatters/deployment.js";
 
 export async function deployApp(request: FastifyRequest, reply: FastifyReply) {
@@ -87,8 +87,10 @@ export async function deployApp(request: FastifyRequest, reply: FastifyReply) {
         : cloneDbParam.trim();
 
     if (!rawParam) {
-      // Fallback to "default" database key (or first configured database)
-      const defaultDb = databases.find((d) => d.key === "default")!;
+      // Fallback to "default" / "primary" database key (or first configured database)
+      const defaultDb =
+        databases.find((d) => d.key === "default" || d.key === "primary") ||
+        databases[0];
       cloneDbTargets = [defaultDb];
     } else if (rawParam.toLowerCase() === "all") {
       // Clone all databases configured for this application

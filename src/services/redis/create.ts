@@ -2,7 +2,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { ensureRedis, getAppRedisUrl } from "../../lib/redis.js";
 import { resolveRedisConfig } from "../../lib/utils.js";
-import { encryptValue, PRODUCT_NAME } from "@explita/protocol";
+import { encryptValue, PRODUCT_NAME } from "@explita/infra-protocol";
 
 export async function createRedis(
   request: FastifyRequest,

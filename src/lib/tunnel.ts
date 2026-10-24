@@ -2,14 +2,14 @@ import { prisma } from "./prisma.js";
 import { run, stream } from "./runner.js";
 import { caddy, docker, tunnel } from "./constants.js";
 import { FormattedApp } from "./formatters/app.js";
-import { logger } from "@explita/protocol";
+import { logger } from "@explita/infra-protocol";
 import {
   DEFAULT_CONTAINER_PORT,
   getAppTunnelContainerName,
   getAppTunnelSubdomain,
   getPreviewTunnelContainerName,
   getPreviewTunnelSubdomain,
-} from "@explita/protocol/deploy";
+} from "@explita/infra-protocol/deploy";
 import { InputJsonValue } from "../generated/prisma/internal/prismaNamespace.js";
 import { stripIdPrefix } from "./id.js";
 
@@ -192,7 +192,10 @@ export async function syncAppTunnel(
             where: { id: rawDepId },
           })
         : await prisma.deployment.findFirst({
-            where: { appId: rawAppId, status: { in: ["LIVE", "HEALTH_CHECK"] } },
+            where: {
+              appId: rawAppId,
+              status: { in: ["LIVE", "HEALTH_CHECK"] },
+            },
             orderBy: { startedAt: "desc" },
           });
 

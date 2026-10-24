@@ -27,15 +27,18 @@ test("generateBackupFilename produces valid timestamped .sql.gz filename", () =>
 });
 
 test("extractKeyFromBackupFilename extracts database key from backup filenames", async () => {
-  const { extractKeyFromBackupFilename } = await import(
-    "../src/services/database/lib/utils.js"
-  );
+  const { extractKeyFromBackupFilename } =
+    await import("../src/services/database/lib/utils.js");
   assert.equal(
-    extractKeyFromBackupFilename("backup-default-2026-10-12T12-00-00-000Z.sql.gz"),
+    extractKeyFromBackupFilename(
+      "backup-default-2026-10-12T12-00-00-000Z.sql.gz",
+    ),
     "default",
   );
   assert.equal(
-    extractKeyFromBackupFilename("backup-analytics-2026-10-12T12-00-00-000Z.sql.gz"),
+    extractKeyFromBackupFilename(
+      "backup-analytics-2026-10-12T12-00-00-000Z.sql.gz",
+    ),
     "analytics",
   );
   assert.equal(
@@ -149,22 +152,33 @@ test("pruneOldDatabaseBackups isolates pruning by database key", async () => {
 });
 
 test("buildS3ObjectKey formats object path correctly and trims slashes", async () => {
-  const { buildS3ObjectKey } = await import(
-    "../src/services/database/backup/helpers/s3.js"
-  );
+  const { buildS3ObjectKey } =
+    await import("../src/services/database/backup/helpers/s3.js");
 
-  const key1 = buildS3ObjectKey("backups", "app123", "default", "backup-default-2026.sql.gz");
+  const key1 = buildS3ObjectKey(
+    "backups",
+    "app123",
+    "default",
+    "backup-default-2026.sql.gz",
+  );
   assert.equal(key1, "backups/app123/default/backup-default-2026.sql.gz");
 
-  const key2 = buildS3ObjectKey("/custom/prefix/", "app456", "analytics", "backup-analytics-2026.sql.gz");
-  assert.equal(key2, "custom/prefix/app456/analytics/backup-analytics-2026.sql.gz");
+  const key2 = buildS3ObjectKey(
+    "/custom/prefix/",
+    "app456",
+    "analytics",
+    "backup-analytics-2026.sql.gz",
+  );
+  assert.equal(
+    key2,
+    "custom/prefix/app456/analytics/backup-analytics-2026.sql.gz",
+  );
 });
 
 test("resolveAppS3Config resolves app override, honors disabled state, and decrypts secrets", async () => {
-  const { resolveAppS3Config } = await import(
-    "../src/services/database/backup/helpers/s3.js"
-  );
-  const { encryptValue } = await import("@explita/protocol");
+  const { resolveAppS3Config } =
+    await import("../src/services/database/backup/helpers/s3.js");
+  const { encryptValue } = await import("@explita/infra-protocol");
 
   // Disabled
   const disabledApp: any = {
@@ -203,9 +217,8 @@ test("resolveAppS3Config resolves app override, honors disabled state, and decry
 });
 
 test("SqlContentHasher computes identical hashes when only volatile comments/timestamps differ", async () => {
-  const { SqlContentHasher } = await import(
-    "../src/services/database/backup/helpers/exec.js"
-  );
+  const { SqlContentHasher } =
+    await import("../src/services/database/backup/helpers/exec.js");
   const { Readable } = await import("node:stream");
   const { pipeline } = await import("node:stream/promises");
   const { Writable } = await import("node:stream");
@@ -236,7 +249,9 @@ test("SqlContentHasher computes identical hashes when only volatile comments/tim
     "-- Dump completed on 2026-10-18 10:00:00",
   ].join("\n");
 
-  const hashStream = async (sql: string): Promise<{ digest: string; output: string }> => {
+  const hashStream = async (
+    sql: string,
+  ): Promise<{ digest: string; output: string }> => {
     const hasher = new SqlContentHasher();
     const chunks: Buffer[] = [];
     const sink = new Writable({
@@ -267,6 +282,3 @@ test("SqlContentHasher computes identical hashes when only volatile comments/tim
   // Hash of dump3 must differ because actual table data changed (Alice -> Bob)
   assert.notEqual(res1.digest, res3.digest);
 });
-
-
-

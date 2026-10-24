@@ -2,7 +2,7 @@ import { prisma } from "./prisma.js";
 import { run } from "./runner.js";
 import { caddy } from "./constants.js";
 import { notificationService } from "./notification-service.js";
-import { logger } from "@explita/protocol";
+import { logger } from "@explita/infra-protocol";
 import { formatApp, FormattedApp } from "./formatters/app.js";
 import { stripAppPrefixes } from "./id.js";
 
@@ -57,9 +57,7 @@ export class ContainerHealthMonitor {
         },
       });
 
-      const formattedApps = apps.map((app) =>
-        stripAppPrefixes(formatApp(app)),
-      );
+      const formattedApps = apps.map((app) => stripAppPrefixes(formatApp(app)));
 
       for (const app of formattedApps) {
         if (app.currentDeployment?.status !== "LIVE") continue;

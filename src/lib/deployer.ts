@@ -25,9 +25,9 @@ import {
   DEFAULT_CONTAINER_PORT,
   AppDbEntry,
   isTerminalStatus,
-} from "@explita/protocol/deploy";
-import { logger } from "@explita/protocol";
-import { findDeployment } from "./app-helpers.js";
+} from "@explita/infra-protocol/deploy";
+import { logger } from "@explita/infra-protocol";
+import { findDeployment, getAppEnvironment } from "./app-helpers.js";
 import { stripAppPrefixes } from "./id.js";
 import {
   cloneDatabaseForPreview,
@@ -523,18 +523,6 @@ export class Deployer {
 
     const meta = app.metadata;
 
-    const defaultDb = app.databasesMap.get("default");
-
-    const defaultClonedUrl =
-      typeof overrideDbUrls === "string"
-        ? overrideDbUrls
-        : overrideDbUrls?.get("default") ||
-          (defaultDb ? defaultDb.url : undefined);
-
-    const defaultDbUrl = defaultClonedUrl || defaultDb?.url;
-
-    const redisUrl = app.redis?.url;
-
     const runArgs = [
       "run",
       "-d",
@@ -546,29 +534,10 @@ export class Deployer {
       containerName,
     ];
 
-    if (defaultDbUrl) {
-      runArgs.push("-e", `DATABASE_URL=${defaultDbUrl}`);
-    }
-
-    for (const db of app.databases) {
-      if (db.key !== "default" && db.key !== "primary" && db.url) {
-        const envKey = `${db.key.toUpperCase().replace(/[^A-Z0-9_]/g, "_")}_DATABASE_URL`;
-
-        runArgs.push("-e", `${envKey}=${db.url}`);
-      }
-    }
-
-    if (redisUrl) {
-      runArgs.push("-e", `REDIS_URL=${redisUrl}`);
-    }
+    const { dockerArgs } = getAppEnvironment(app, { overrideDbUrls });
+    runArgs.push(...dockerArgs);
 
     const resources = meta.resources;
-    if (resources?.memory) {
-      runArgs.push(`--memory=${resources.memory}`);
-    }
-    if (resources?.cpus) {
-      runArgs.push(`--cpus=${resources.cpus}`);
-    }
     if (resources?.memory || resources?.cpus) {
       await stateLog(
         `Resource limits: memory=${resources.memory || "unlimited"}, cpus=${resources.cpus || "unlimited"}`,
@@ -579,11 +548,6 @@ export class Deployer {
       await stateLog(
         `Injecting ${app.envs.length} environment variable(s) into container`,
       );
-      for (const e of app.envs) {
-        if (e.key && e.value) {
-          runArgs.push("-e", `${e.key}=${e.value}`);
-        }
-      }
     }
 
     if (meta.volumes && typeof meta.volumes === "object") {
@@ -592,9 +556,6 @@ export class Deployer {
         await stateLog(
           `Mounting ${volumeEntries.length} volume(s) into container`,
         );
-        for (const [hostOrVol, containerPath] of volumeEntries) {
-          runArgs.push("-v", `${hostOrVol}:${containerPath}`);
-        }
       }
     }
 

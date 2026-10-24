@@ -1,7 +1,7 @@
 import { readdirSync, statSync, unlinkSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { getAppDbBackupDir } from "../../../../lib/constants.js";
-import { logger } from "@explita/protocol";
+import { logger } from "@explita/infra-protocol";
 import { extractKeyFromBackupFilename } from "../../lib/utils.js";
 
 export async function pruneOldDatabaseBackups(

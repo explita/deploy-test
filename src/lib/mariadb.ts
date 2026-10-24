@@ -2,7 +2,7 @@ import { mkdir } from "node:fs/promises";
 import { Socket } from "node:net";
 import { run, stream } from "./runner.js";
 import { docker, mariadb } from "./constants.js";
-import { MARIADB_CONTAINER_NAME, logger } from "@explita/protocol";
+import { MARIADB_CONTAINER_NAME, logger } from "@explita/infra-protocol";
 
 export async function ensureManagedMariaDb(): Promise<void> {
   if (!mariadb.rootPassword) {

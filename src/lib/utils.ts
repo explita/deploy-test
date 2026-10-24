@@ -1,5 +1,5 @@
 import { server } from "./constants.js";
-import { REDIS_CONTAINER_NAME } from "@explita/protocol/deploy";
+import { REDIS_CONTAINER_NAME } from "@explita/infra-protocol/deploy";
 
 export function resolveRedisConfig() {
   const enabled = process.env.REDIS_ENABLED === "true";

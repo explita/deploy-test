@@ -3,7 +3,7 @@ import os from "node:os";
 import { statfs } from "node:fs/promises";
 import { run } from "../../lib/runner.js";
 import { caddy } from "../../lib/constants.js";
-import { SystemDiagnostics } from "@explita/protocol/deploy";
+import { SystemDiagnostics } from "@explita/infra-protocol/deploy";
 import { DEPLOY_VERSION } from "../../version.js";
 
 export async function getSystemDoctor(

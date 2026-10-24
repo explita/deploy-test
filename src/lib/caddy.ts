@@ -3,8 +3,8 @@ import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { caddy, docker, custom, server } from "./constants.js";
 import { run, stream } from "./runner.js";
-import { logger } from "@explita/protocol";
-import { cleanDomain } from "@explita/protocol/deploy";
+import { logger } from "@explita/infra-protocol";
+import { cleanDomain } from "@explita/infra-protocol/deploy";
 import { findAppByIdOrName } from "./app-helpers.js";
 import {
   renderMaintenanceHtml,
@@ -383,9 +383,7 @@ ${maintenanceDirective}
   if (siteBlocks.length > 0) {
     const caddyConfig = `${siteBlocks.join("\n\n")}\n`;
     await writeFile(appConfigFile, caddyConfig, "utf8");
-    logger.info(
-      `Maintenance mode route active for ${app.name}`,
-    );
+    logger.info(`Maintenance mode route active for ${app.name}`);
   } else {
     if (existsSync(appConfigFile)) {
       await unlink(appConfigFile).catch(() => null);

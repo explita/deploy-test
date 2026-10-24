@@ -6,7 +6,7 @@ import { WebSocket } from "@fastify/websocket";
 import {
   ActiveDeploymentState,
   isTerminalStatus,
-} from "@explita/protocol/deploy";
+} from "@explita/infra-protocol/deploy";
 
 export async function deploymentStatus(
   socket: WebSocket,
@@ -57,7 +57,10 @@ export async function deploymentStatus(
   }
 
   socket.send(
-    JSON.stringify({ type: "snapshot", deployment: formatDeployment(deployment) }),
+    JSON.stringify({
+      type: "snapshot",
+      deployment: formatDeployment(deployment),
+    }),
   );
   socket.close();
 }

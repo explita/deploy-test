@@ -1,5 +1,5 @@
 import { mkdir, readFile } from "node:fs/promises";
-import { logger } from "@explita/protocol";
+import { logger } from "@explita/infra-protocol";
 import { FormattedApp } from "./formatters/app.js";
 import { custom } from "./constants.js";
 import { existsSync } from "node:fs";

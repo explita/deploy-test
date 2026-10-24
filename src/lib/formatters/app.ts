@@ -1,4 +1,4 @@
-import { decryptValue } from "@explita/protocol";
+import { decryptValue } from "@explita/infra-protocol";
 import {
   App,
   Domain,
@@ -8,7 +8,7 @@ import {
   AppCron,
   AppEnv,
 } from "../../generated/prisma/client.js";
-import { AppMetadata } from "@explita/protocol/deploy";
+import { AppMetadata } from "@explita/infra-protocol/deploy";
 import {
   formatAppId,
   formatDeploymentId,

@@ -7,7 +7,7 @@ import {
   normalizeMemoryLimit,
   normalizeCpuLimit,
   encryptEnvMap,
-} from "@explita/protocol";
+} from "@explita/infra-protocol";
 import { run } from "../../lib/runner.js";
 import { cronScheduler } from "../../lib/cron-scheduler.js";
 import { formatApp } from "../../lib/formatters/app.js";
@@ -161,7 +161,10 @@ export async function updateApp(request: FastifyRequest, reply: FastifyReply) {
     meta.tunnel?.enabled === true || meta.tunnelEnabled === true;
   if (tunnelPref === false) {
     await removeAppTunnel(updatedApp);
-  } else if (tunnelPref === true || (input.port !== undefined && isTunnelActive)) {
+  } else if (
+    tunnelPref === true ||
+    (input.port !== undefined && isTunnelActive)
+  ) {
     tunnelUrl = await syncAppTunnel(updatedApp);
   }
 

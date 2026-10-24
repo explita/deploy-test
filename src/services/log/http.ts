@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { run } from "../../lib/runner.js";
-import { RuntimeLogsQuery } from "@explita/protocol/deploy";
+import { RuntimeLogsQuery } from "@explita/infra-protocol/deploy";
 
 export async function getRuntimeLogsHttp(
   request: FastifyRequest<{

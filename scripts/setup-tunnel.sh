@@ -17,7 +17,7 @@
 #   sudo bash scripts/setup-tunnel.sh --token exp_live_...
 #
 #   # 4. Standalone remote execution on any Explita Deploy VPS
-#   curl -fsSL https://raw.githubusercontent.com/explita/deploy/main/scripts/setup-tunnel.sh | sudo bash
+#   curl -fsSL https://raw.githubusercontent.com/explita/deploy-server/main/scripts/setup-tunnel.sh | sudo bash
 # ==============================================================================
 
 set -euo pipefail
@@ -56,6 +56,7 @@ print_help() {
   echo "  sudo bash scripts/setup-tunnel.sh [options]"
   echo ""
   echo "Options:"
+  echo "  -a, --auto              Auto-request instant token via server IP (zero config)"
   echo "  -e, --email <email>     Email address to authorize with Explita Tunnel"
   echo "  -o, --otp <6-digit>     Verification code sent to email (alias: -v, --verify)"
   echo "  -t, --token <token>     Save a pre-existing tunnel token (bypasses OTP)"
@@ -64,6 +65,7 @@ print_help() {
   echo ""
   echo "Examples:"
   echo "  sudo bash scripts/setup-tunnel.sh"
+  echo "  sudo bash scripts/setup-tunnel.sh --auto"
   echo "  sudo bash scripts/setup-tunnel.sh -e developer@example.com"
   echo "  sudo bash scripts/setup-tunnel.sh -e developer@example.com -o 123456"
   echo "  sudo bash scripts/setup-tunnel.sh --token exp_live_..."
@@ -93,6 +95,7 @@ run_as_target() {
 # ------------------------------------------------------------------------------
 # 2. Parse Command Line Arguments
 # ------------------------------------------------------------------------------
+PARAM_AUTO=false
 PARAM_EMAIL=""
 PARAM_OTP=""
 PARAM_TOKEN=""
@@ -100,6 +103,10 @@ PARAM_SERVER="https://tunnel.explita.ng"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    -a|--auto)
+      PARAM_AUTO=true
+      shift
+      ;;
     -e|--email)
       PARAM_EMAIL="${2:-}"
       shift 2
@@ -430,23 +437,101 @@ if [ -n "$PARAM_TOKEN" ]; then
   exit 0
 fi
 
-# ------------------------------------------------------------------------------
-# 8. Interactive / Automated OTP Flow
-# ------------------------------------------------------------------------------
-EMAIL="$PARAM_EMAIL"
+request_instant_token() {
+  local server="$1"
+  log_info "Auto-requesting instant tunnel token from ${server} via server IP..."
 
-if [ -z "$EMAIL" ]; then
-  if ! has_tty; then
-    log_error "Interactive TTY required to prompt for email. Pass --email or --token."
-    exit 1
+  local public_ip
+  public_ip=$(curl -4s --max-time 3 https://api.ipify.org 2>/dev/null || curl -4s --max-time 3 https://ifconfig.me 2>/dev/null || echo "")
+
+  local machine_id=""
+  if [ -f /etc/machine-id ]; then
+    machine_id=$(tr -d '[:space:]' < /etc/machine-id 2>/dev/null || echo "")
   fi
-  echo ""
-  echo -e "${BOLD}Explita Preview Tunnels Setup${NC}"
-  echo -e "${DIM}Automated preview URLs allow sharing live branch previews (e.g. app-pr-12-preview.tunnel.explita.ng).${NC}"
-  echo ""
-  read_input "Enter your email for tunnel authorization: " EMAIL
-  EMAIL=$(echo "$EMAIL" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+
+  local req_file
+  req_file=$(mktemp) || return 1
+
+  local payload
+  payload=$(printf '{"ip":"%s","machineId":"%s"}' "$public_ip" "$machine_id")
+
+  local http_code
+  http_code=$(curl -fsS --max-time 10 -o "$req_file" -w "%{http_code}" \
+    -X POST "${server}/_api/token/issue" \
+    -H "Content-Type: application/json" \
+    -d "$payload" 2>/dev/null || echo "000")
+
+  local body
+  body=$(cat "$req_file" 2>/dev/null || echo "{}")
+  rm -f "$req_file"
+
+  if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+    local token
+    token=$(extract_json_field "$body" "token")
+    if [ -n "$token" ] && validate_tunnel_token "$token"; then
+      echo "$token"
+      return 0
+    fi
+  fi
+  return 1
+}
+
+# ------------------------------------------------------------------------------
+# 8. Token Provisioning (Instant IP-based or Email OTP)
+# ------------------------------------------------------------------------------
+USE_INSTANT=false
+
+if [ "$PARAM_AUTO" = true ]; then
+  USE_INSTANT=true
+elif [ -z "$PARAM_EMAIL" ] && [ -z "$PARAM_OTP" ]; then
+  if ! has_tty; then
+    USE_INSTANT=true
+  else
+    echo ""
+    echo -e "${BOLD}Explita Preview Tunnels Setup${NC}"
+    echo -e "${DIM}Automated preview URLs allow sharing live branch previews (e.g. app-pr-12-preview.tunnel.explita.ng).${NC}"
+    echo ""
+    echo "Choose token provisioning method:"
+    echo "  1) Instant token via Server IP (Recommended, zero configuration)"
+    echo "  2) Email verification (OTP code)"
+    echo ""
+    read_input "Select option [1/2, default: 1]: " PROV_CHOICE || PROV_CHOICE="1"
+    if [ "$PROV_CHOICE" = "2" ]; then
+      USE_INSTANT=false
+    else
+      USE_INSTANT=true
+    fi
+  fi
 fi
+
+VERIFIED_TOKEN=""
+TOKEN_SOURCE="Server IP / Machine ID"
+
+if [ "$USE_INSTANT" = true ]; then
+  INSTANT_TOKEN=$(request_instant_token "$PARAM_SERVER" || echo "")
+  if [ -n "$INSTANT_TOKEN" ]; then
+    VERIFIED_TOKEN="$INSTANT_TOKEN"
+    log_success "Instant tunnel token successfully retrieved from ${PARAM_SERVER}."
+  else
+    if [ "$PARAM_AUTO" = true ] || ! has_tty; then
+      log_error "Failed to auto-provision instant tunnel token from ${PARAM_SERVER}."
+      exit 1
+    fi
+    log_warn "Instant token provisioning could not reach ${PARAM_SERVER}. Falling back to email OTP..."
+    USE_INSTANT=false
+  fi
+fi
+
+if [ "$USE_INSTANT" = false ]; then
+  EMAIL="$PARAM_EMAIL"
+  if [ -z "$EMAIL" ]; then
+    if ! has_tty; then
+      log_error "Interactive TTY required to prompt for email. Pass --email or --token."
+      exit 1
+    fi
+    read_input "Enter your email for tunnel authorization: " EMAIL
+    EMAIL=$(echo "$EMAIL" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+  fi
 
 if ! [[ "$EMAIL" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
   log_error "Invalid email address: '${EMAIL}'"
@@ -544,9 +629,10 @@ if [ "$VERIFY_HTTP_CODE" != "200" ] && [ "$VERIFY_HTTP_CODE" != "201" ] || [ "$V
   exit 1
 fi
 
-if ! validate_tunnel_token "$VERIFIED_TOKEN"; then
-  log_error "Verification succeeded, but server returned an invalid token format."
-  exit 1
+  if ! validate_tunnel_token "$VERIFIED_TOKEN"; then
+    log_error "Verification succeeded, but server returned an invalid token format."
+    exit 1
+  fi
 fi
 
 # ------------------------------------------------------------------------------
@@ -580,7 +666,7 @@ echo -e "${GREEN}${BOLD}========================================================
 echo -e "${GREEN}${BOLD}         Explita Preview Tunnels Successfully Activated!         ${NC}"
 echo -e "${GREEN}${BOLD}================================================================${NC}"
 echo ""
-echo -e "Authorized Email : ${BOLD}${EMAIL}${NC}"
+echo -e "Identifier       : ${BOLD}${TOKEN_SOURCE}${NC}"
 echo -e "Tunnel Server    : ${BOLD}${PARAM_SERVER}${NC}"
 echo -e "Tunnel Token     : ${CYAN}${MASKED_TOKEN}${NC}"
 echo -e "Config Location  : ${DIM}${ENV_FILE}${NC}"

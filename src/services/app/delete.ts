@@ -9,12 +9,12 @@ import { removeAppTunnel, removePreviewTunnel } from "../../lib/tunnel.js";
 import {
   getAppTunnelContainerName,
   getPreviewTunnelContainerName,
-} from "@explita/protocol/deploy";
+} from "@explita/infra-protocol/deploy";
 import { stripIdPrefix } from "../../lib/id.js";
 import { execPostgres } from "../database/lib/exec.js";
 import { execRedisCli } from "../../lib/redis.js";
 import { cronScheduler } from "../../lib/cron-scheduler.js";
-import { logger } from "@explita/protocol";
+import { logger } from "@explita/infra-protocol";
 
 export async function deleteApp(request: FastifyRequest, reply: FastifyReply) {
   const app = request.ctx.app;

@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { RequestParams } from "../../types/misc.js";
 import { verifyDomainDns } from "../../lib/domain-verifier.js";
-import { DomainCheckResult } from "@explita/protocol/deploy";
+import { DomainCheckResult } from "@explita/infra-protocol/deploy";
 
 interface CheckAppDomainQuery {
   domain?: string;
