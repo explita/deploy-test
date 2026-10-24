@@ -103,6 +103,7 @@ run_as_target() {
 # 3. Configuration & Directory Resolution
 # ------------------------------------------------------------------------------
 DEFAULT_INSTALL_DIR="/opt/explita/deploy"
+INSTALL_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 REPO_URL="${REPO_URL:-https://github.com/explita/deploy-test.git}"
 BRANCH="${BRANCH:-main}"
 
@@ -112,10 +113,8 @@ if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/../package.json" ]; then
   DEPLOY_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 elif [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/package.json" ]; then
   DEPLOY_DIR="$SCRIPT_DIR"
-elif [ -f "${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}/package.json" ]; then
-  DEPLOY_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 else
-  DEPLOY_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
+  DEPLOY_DIR="$INSTALL_DIR"
 fi
 
 log_info "Configuring Explita Deploy at: ${BOLD}${DEPLOY_DIR}${NC}"
